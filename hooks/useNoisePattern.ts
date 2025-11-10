@@ -1,5 +1,4 @@
 // src/hooks/useNoisePattern.ts
-
 import { useState, useEffect } from "react";
 
 export const useNoisePattern = (): string => {

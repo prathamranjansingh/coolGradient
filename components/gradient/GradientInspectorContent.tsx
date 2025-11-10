@@ -1,5 +1,4 @@
-// src/components/gradient/GradientInspector.tsx
-
+// src/components/gradient/GradientInspectorContent.tsx
 import React, { FC, Dispatch, useCallback } from "react";
 import {
   GradientState,
@@ -14,35 +13,49 @@ import { GradientPanel } from "./panels/GradientPanel";
 import { EffectsPanel } from "./panels/EffectsPanel";
 import { ExportPanel } from "./panels/ExportPanel";
 
-interface GradientInspectorProps {
+interface GradientInspectorContentProps {
   state: GradientState;
   dispatch: Dispatch<GradientActions>;
   sortedStops: ColorStop[];
   railGradientCss: string;
   cssExportString: string;
-  // isOpen prop removed, as this component now assumes it's 'open' (on desktop)
-  // or part of a drawer (on mobile).
+  // ✅ New props for hover
+  onGraphHover: (position: number) => void;
+  onGraphLeave: () => void;
 }
 
-// ✅ Renamed to GradientInspectorContent to be clear it's the inner part
-// of the inspector, used by both sidebar and drawer.
-export const GradientInspectorContent: FC<GradientInspectorProps> = ({
+export const GradientInspectorContent: FC<GradientInspectorContentProps> = ({
   state,
   dispatch,
   sortedStops,
   railGradientCss,
   cssExportString,
+  onGraphHover,
+  onGraphLeave,
 }) => {
   const handleRandomize = useCallback(
     () => dispatch({ type: ActionType.RANDOMIZE, payload: { newState: {} } }),
     [dispatch]
   );
 
+  const isPreviewMode =
+    typeof window !== "undefined" &&
+    document.body.dataset.livePreview === "true";
+
   return (
-    <div className="w-full lg:w-96 h-full flex flex-col">
-      {" "}
-      {/* This div was inside <aside> before */}
-      <div className="flex flex-row items-center justify-between p-4 border-b border-border h-[69px] flex-shrink-0">
+    <div
+      className={`w-full lg:w-[450px] h-full flex flex-col rounded-lg overflow-hidden ${
+        isPreviewMode ? "bg-transparent" : "bg-background"
+      }`}
+    >
+      {/* Header */}
+      <div
+        className={`flex flex-row items-center justify-between p-4 h-[69px] flex-shrink-0 ${
+          isPreviewMode
+            ? "bg-transparent border-transparent"
+            : "bg-background border-b border-border"
+        }`}
+      >
         <h1 className="text-xl font-semibold">Inspector</h1>
         <Button
           variant="ghost"
@@ -53,6 +66,7 @@ export const GradientInspectorContent: FC<GradientInspectorProps> = ({
           <Shuffle className="w-5 h-5" />
         </Button>
       </div>
+
       <Tabs
         defaultValue="gradient"
         className="flex-1 flex flex-col overflow-hidden"
@@ -76,6 +90,8 @@ export const GradientInspectorContent: FC<GradientInspectorProps> = ({
               dispatch={dispatch}
               sortedStops={sortedStops}
               railGradientCss={railGradientCss}
+              onGraphHover={onGraphHover} // ✅ Pass props
+              onGraphLeave={onGraphLeave} // ✅ Pass props
             />
           </TabsContent>
           <TabsContent value="effects" className="p-6 pt-2">

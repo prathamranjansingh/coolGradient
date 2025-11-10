@@ -1,8 +1,27 @@
+// src/types/gradient.ts
 export interface ColorStop {
   id: string;
   color: string;
   alpha: number;
   position: number;
+}
+
+export interface FilterState {
+  blur: number;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  hueRotate: number;
+}
+
+export interface VignetteState {
+  strength: number;
+  size: number;
+}
+
+export interface NoiseState {
+  opacity: number;
+  blendMode: "overlay" | "soft-light" | "multiply" | "screen" | "normal";
 }
 
 export interface GradientState {
@@ -11,33 +30,10 @@ export interface GradientState {
   angle: number;
   type: "linear" | "radial";
   repeating: boolean;
-  filters: {
-    blur: number;
-    brightness: number;
-    contrast: number;
-    saturation: number;
-    hueRotate: number;
-  };
-  vignette: {
-    strength: number;
-    size: number;
-  };
-  noise: {
-    opacity: number;
-    blendMode: "overlay" | "soft-light" | "multiply" | "screen" | "normal";
-  };
+  filters: FilterState;
+  vignette: VignetteState;
+  noise: NoiseState;
 }
-
-type ActionMap<M extends { [index: string]: any }> = {
-  [Key in keyof M]: M[Key] extends undefined
-    ? {
-        type: Key;
-      }
-    : {
-        type: Key;
-        payload: M[Key];
-      };
-};
 
 export enum ActionType {
   ADD_STOP = "ADD_STOP",
@@ -45,34 +41,48 @@ export enum ActionType {
   UPDATE_STOP = "UPDATE_STOP",
   SELECT_STOP = "SELECT_STOP",
   UPDATE_STOP_POSITION = "UPDATE_STOP_POSITION",
-
   SET_TYPE = "SET_TYPE",
   SET_ANGLE = "SET_ANGLE",
-
   SET_FILTER = "SET_FILTER",
   SET_VIGNETTE = "SET_VIGNETTE",
   SET_NOISE = "SET_NOISE",
+  // SET_PATTERN is fully removed
   RESET_EFFECTS = "RESET_EFFECTS",
   RANDOMIZE = "RANDOMIZE",
 }
 
-type GradientPayload = {
-  [ActionType.ADD_STOP]: { position: number; newStop: ColorStop };
-  [ActionType.REMOVE_STOP]: { id: string };
-  [ActionType.UPDATE_STOP]: { id: string; key: keyof ColorStop; value: any };
-  [ActionType.SELECT_STOP]: { id: string };
-  [ActionType.UPDATE_STOP_POSITION]: { id: string; position: number };
-
-  [ActionType.SET_TYPE]: { type: "linear" | "radial" };
-  [ActionType.SET_ANGLE]: { angle: number };
-
-  [ActionType.SET_FILTER]: { key: string; value: number };
-  [ActionType.SET_VIGNETTE]: { key: string; value: number };
-  [ActionType.SET_NOISE]: { key: string; value: string | number };
-
-  [ActionType.RESET_EFFECTS]: undefined;
-  [ActionType.RANDOMIZE]: { newState: Partial<GradientState> };
-};
-
 export type GradientActions =
-  ActionMap<GradientPayload>[keyof ActionMap<GradientPayload>];
+  | {
+      type: ActionType.ADD_STOP;
+      payload: { position: number; newStop: ColorStop };
+    }
+  | { type: ActionType.REMOVE_STOP; payload: { id: string } }
+  | {
+      type: ActionType.UPDATE_STOP;
+      payload: { id: string; key: keyof ColorStop; value: any };
+    }
+  | { type: ActionType.SELECT_STOP; payload: { id: string } }
+  | {
+      type: ActionType.UPDATE_STOP_POSITION;
+      payload: { id: string; position: number };
+    }
+  | { type: ActionType.SET_TYPE; payload: { type: "linear" | "radial" } }
+  | { type: ActionType.SET_ANGLE; payload: { angle: number } }
+  | {
+      type: ActionType.SET_FILTER;
+      payload: { key: keyof FilterState; value: number };
+    }
+  | {
+      type: ActionType.SET_VIGNETTE;
+      payload: { key: keyof VignetteState; value: number };
+    }
+  | {
+      type: ActionType.SET_NOISE;
+      payload: { key: keyof NoiseState; value: any };
+    }
+  // SET_PATTERN action type is fully removed
+  | { type: ActionType.RESET_EFFECTS }
+  | {
+      type: ActionType.RANDOMIZE;
+      payload: { newState: Partial<GradientState> };
+    };

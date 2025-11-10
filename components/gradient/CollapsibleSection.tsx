@@ -1,3 +1,4 @@
+// src/components/gradient/CollapsibleSection.tsx
 import React, { FC } from "react";
 import {
   Collapsible,

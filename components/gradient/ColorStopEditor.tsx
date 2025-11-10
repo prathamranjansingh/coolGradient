@@ -1,5 +1,4 @@
 // src/components/gradient/ColorStopEditor.tsx
-
 import React, { FC } from "react";
 import { ColorStop } from "@/types/gradient";
 import { Button } from "@/components/ui/button";

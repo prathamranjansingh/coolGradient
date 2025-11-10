@@ -1,5 +1,4 @@
 // src/components/gradient/panels/GradientPanel.tsx
-
 import React, { FC, Dispatch, useCallback } from "react";
 import {
   GradientState,
@@ -11,12 +10,17 @@ import { Label } from "@/components/ui/label";
 import { GradientRail } from "../GradientRail";
 import { ColorStopEditor } from "../ColorStopEditor";
 import { ControlInput } from "../ControlInput";
+import { ColorChart } from "./ColorChart";
+import { useGradientSampler } from "@/hooks/useGradientSampler";
 
 interface GradientPanelProps {
   state: GradientState;
   dispatch: Dispatch<GradientActions>;
   sortedStops: ColorStop[];
   railGradientCss: string;
+  // ✅ New props for hover
+  onGraphHover: (position: number) => void;
+  onGraphLeave: () => void;
 }
 
 export const GradientPanel: FC<GradientPanelProps> = ({
@@ -24,13 +28,17 @@ export const GradientPanel: FC<GradientPanelProps> = ({
   dispatch,
   sortedStops,
   railGradientCss,
+  onGraphHover,
+  onGraphLeave,
 }) => {
   const { type, angle, stops, activeStopId } = state;
   const activeStop = stops.find((s) => s.id === activeStopId) || null;
 
+  const chartData = useGradientSampler(sortedStops, 100);
+
+  // ... (all handler functions: handleAddStop, handleRemoveStop, etc.) ...
   const handleAddStop = useCallback(
     (position?: number) => {
-      // ... (existing logic) ...
       let insertPos = position;
       if (insertPos === undefined) {
         const sorted = [...stops].sort((a, b) => a.position - b.position);
@@ -141,7 +149,6 @@ export const GradientPanel: FC<GradientPanelProps> = ({
       </div>
 
       {type === "linear" && (
-        // ✅ Use ControlInput with type="slider"
         <ControlInput
           label="Angle"
           min={0}
@@ -170,6 +177,14 @@ export const GradientPanel: FC<GradientPanelProps> = ({
           onUpdateStopPosition={handleUpdateStopPosition}
         />
       </div>
+
+      {/* ✅ Graph is now here, above the editor */}
+      <ColorChart
+        data={chartData}
+        stops={sortedStops}
+        onHover={onGraphHover}
+        onLeave={onGraphLeave}
+      />
 
       <ColorStopEditor
         stop={activeStop}

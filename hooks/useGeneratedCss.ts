@@ -1,5 +1,4 @@
 // src/hooks/useGeneratedCss.ts
-
 import { useMemo } from "react";
 import { GradientState } from "@/types/gradient";
 import { hexToRgba } from "@/lib/color";
@@ -59,26 +58,32 @@ export const useGeneratedCss = (
     return `radial-gradient(ellipse at center, transparent ${size}%, rgba(0,0,0, ${strength}) 100%)`;
   }, [settings.vignette]);
 
+  // ✅ Pattern CSS generator removed
+
+  // --- CSS String Generation ---
+
   const basePseudoStyles = ['content: "";', "position: absolute;", "inset: 0;"];
 
-  const cssForBefore = useMemo(() => {
-    const layers = [vignetteCss, gradientCss].filter(Boolean);
+  const beforeRawStyles = useMemo(() => {
+    const layers = [vignetteCss, gradientCss].filter(Boolean); // ✅ Pattern removed
+    const sizes = ["cover", "cover"];
+    const blendModes = ["normal", "normal"];
+
     const styles = [
       ...basePseudoStyles,
       "z-index: 1;",
-      `background-image: ${layers.join(", \n                ")};`,
-      `background-size: cover;`,
+      `background-image: ${layers.join(", \n            ")};`,
+      `background-size: ${sizes.join(", ")};`,
+      `mix-blend-mode: ${blendModes.join(", ")};`,
       filterCss ? `filter: ${filterCss};` : "",
     ].filter(Boolean);
+    return styles.join("\n  ");
+  }, [gradientCss, vignetteCss, filterCss]); // ✅ Pattern deps removed
 
-    return `.your-element::before {\n  ${styles.join("\n  ")}\n}`;
-  }, [gradientCss, vignetteCss, filterCss]);
-
-  const cssForAfter = useMemo(() => {
+  const afterRawStyles = useMemo(() => {
     if (settings.noise.opacity === 0 || !noisePatternDataUrl) {
-      return ".your-element::after { display: none; }";
+      return "display: none;";
     }
-
     const styles = [
       ...basePseudoStyles,
       "z-index: 2;",
@@ -88,9 +93,13 @@ export const useGeneratedCss = (
       `mix-blend-mode: ${settings.noise.blendMode};`,
       "pointer-events: none;",
     ];
-
-    return `.your-element::after {\n  ${styles.join("\n  ")}\n}`;
+    return styles.join("\n  ");
   }, [settings.noise.opacity, settings.noise.blendMode, noisePatternDataUrl]);
+
+  // --- Final CSS Export Strings ---
+
+  const cssForBefore = `.your-element::before {\n  ${beforeRawStyles}\n}`;
+  const cssForAfter = `.your-element::after {\n  ${afterRawStyles}\n}`;
 
   const cssExportString = `
 /* Usage: 
@@ -109,5 +118,9 @@ ${cssForAfter}
     cssForAfter,
     railGradientCss,
     sortedStops,
+    rawCss: {
+      before: beforeRawStyles,
+      after: afterRawStyles,
+    },
   };
 };

@@ -1,3 +1,4 @@
+// src/components/gradient/GradientRail.tsx
 import React, {
   FC,
   useRef,

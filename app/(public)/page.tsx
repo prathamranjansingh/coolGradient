@@ -3,17 +3,15 @@
 
 import { NextPage } from "next";
 import Head from "next/head";
-import React, { useState } from "react";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import { Button } from "@/components/ui/button"; // Still needed for desktop toggle
-
-// Our modular imports
+import React, { useState, useEffect } from "react";
+import { Drawer } from "@/components/ui/drawer";
 import { useGradientState } from "@/hooks/useGradientState";
 import { useNoisePattern } from "@/hooks/useNoisePattern";
 import { useGeneratedCss } from "@/hooks/useGeneratedCss";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { GradientPreview } from "@/components/gradient/GradientPreview";
-import { ResponsiveInspector } from "@/components/gradient/ResponsiveInspector"; // ✅ Import ResponsiveInspector
-import { useMediaQuery } from "@/hooks/useMediaQuery"; // ✅ Import useMediaQuery
+import { ResponsiveInspector } from "@/components/gradient/ResponsiveInspector";
+import { Header } from "@/components/layout/Header";
 
 const GradientGeneratorPage: NextPage = () => {
   const [state, dispatch] = useGradientState();
@@ -24,64 +22,113 @@ const GradientGeneratorPage: NextPage = () => {
     cssForAfter,
     railGradientCss,
     sortedStops,
+    rawCss,
   } = useGeneratedCss(state, noisePatternDataUrl);
 
+  const [isClient, setIsClient] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  // This state now specifically controls the desktop sidebar visibility
-  const [isDesktopInspectorOpen, setIsDesktopInspectorOpen] = useState(true);
 
-  return (
-    <>
-      <Head>
-        <title>Pro CSS Gradient Generator</title>
-        <style>{`
-          .checkerboard {
-            background-image:
-              linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%),
-              linear-gradient(135deg, hsl(var(--muted)) 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%),
-              linear-gradient(135deg, transparent 75%, hsl(var(--muted)) 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
-          }
-        `}</style>
-      </Head>
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-      <main className="relative flex flex-col lg:flex-row h-screen bg-background text-foreground">
-        {/* --- Main Preview Pane (Left) --- */}
-        <div className="flex-1 h-[60vh] lg:h-full relative p-4 lg:p-10 checkerboard overflow-auto">
-          <GradientPreview
-            cssForBefore={cssForBefore}
-            cssForAfter={cssForAfter}
-          />
+  // ✅ New state to track graph hover
+  const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
 
-          {isDesktop && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute top-4 right-4 z-20"
-              onClick={() => setIsDesktopInspectorOpen((prev) => !prev)}
-              aria-label="Toggle Inspector Panel"
-            >
-              {isDesktopInspectorOpen ? (
-                <PanelRightClose className="h-4 w-4" />
-              ) : (
-                <PanelRightOpen className="h-4 w-4" />
-              )}
-            </Button>
-          )}
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      document.body.dataset.livePreview = isPreviewMode ? "true" : "false";
+    }
+  }, [isPreviewMode, isClient]);
+
+  if (!isClient) {
+    return null;
+  }
+
+  const layoutContent = (
+    <div
+      className={`flex flex-col min-h-screen text-foreground ${
+        isPreviewMode ? "bg-transparent" : "bg-background"
+      }`}
+    >
+      <Header
+        isPreviewMode={isPreviewMode}
+        onTogglePreview={() => setIsPreviewMode((p) => !p)}
+        isMobile={!isDesktop}
+        onToggleMobileDrawer={setIsMobileDrawerOpen}
+      />
+      <main className="flex-1 w-full max-w-screen-2xl mx-auto p-4 lg:p-10">
+        <div className="lg:grid lg:grid-cols-[1fr_450px] lg:gap-8">
+          <div
+            className={`
+              group relative flex-1 h-full overflow-auto
+              ${isPreviewMode ? "bg-transparent" : "checkerboard"}
+              rounded-lg
+            `}
+          >
+            <GradientPreview
+              cssForBefore={cssForBefore}
+              cssForAfter={cssForAfter}
+              railGradientCss={railGradientCss}
+              hoveredPosition={hoveredPosition} // ✅ Pass hover state
+            />
+          </div>
+
+          <div className="relative">
+            {isDesktop && (
+              <ResponsiveInspector
+                isDesktop={isDesktop}
+                state={state}
+                dispatch={dispatch}
+                sortedStops={sortedStops}
+                railGradientCss={railGradientCss}
+                cssExportString={cssExportString}
+                onGraphHover={setHoveredPosition} // ✅ Pass hover handlers
+                onGraphLeave={() => setHoveredPosition(null)} // ✅
+              />
+            )}
+          </div>
         </div>
+      </main>
 
+      {!isDesktop && (
         <ResponsiveInspector
-          isDesktopInspectorOpen={isDesktopInspectorOpen}
-          setIsDesktopInspectorOpen={setIsDesktopInspectorOpen}
+          isDesktop={isDesktop}
           state={state}
           dispatch={dispatch}
           sortedStops={sortedStops}
           railGradientCss={railGradientCss}
           cssExportString={cssExportString}
+          onGraphHover={setHoveredPosition} // ✅ Pass hover handlers
+          onGraphLeave={() => setHoveredPosition(null)} // ✅
         />
-      </main>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <Head>
+        <title>Pro CSS Gradient Generator</title>
+      </Head>
+
+      {isPreviewMode && (
+        <style>{`
+          body::before { ${rawCss.before} }
+          body::after { ${rawCss.after} }
+        `}</style>
+      )}
+
+      {isDesktop ? (
+        layoutContent
+      ) : (
+        <Drawer open={isMobileDrawerOpen} onOpenChange={setIsMobileDrawerOpen}>
+          {layoutContent}
+        </Drawer>
+      )}
     </>
   );
 };

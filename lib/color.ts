@@ -1,5 +1,21 @@
 // src/lib/color.ts
 
+// ✅ New helper function
+const componentToHex = (c: number): string => {
+  const hex = c.toString(16);
+  return hex.length === 1 ? "0" + hex : hex;
+};
+
+// ✅ New helper function
+export const rgbToHex = (r: number, g: number, b: number): string => {
+  return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+};
+
+// ✅ New helper function
+export const rgbToCssString = (r: number, g: number, b: number): string => {
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
 export const hslToHex = (h: number, s: number, l: number): string => {
   l /= 100;
   const a = (s * Math.min(l, 1 - l)) / 100;
@@ -24,11 +40,33 @@ export const getRandomComplementaryColors = (): [string, string] => {
 };
 
 export const hexToRgba = (hex: string, alpha: number): string => {
-  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-    hex = "#000000"; // Fallback for invalid hex
+  const rgb = hexToRgb(hex);
+  if (!rgb) return `rgba(0, 0, 0, ${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+};
+
+export const lerp = (a: number, b: number, amount: number): number => {
+  return (1 - amount) * a + amount * b;
+};
+
+export const hexToRgb = (
+  hex: string
+): { r: number; g: number; b: number } | null => {
+  const hexVal = hex.startsWith("#") ? hex.slice(1) : hex;
+
+  if (hexVal.length === 3) {
+    const r = parseInt(hexVal[0] + hexVal[0], 16);
+    const g = parseInt(hexVal[1] + hexVal[1], 16);
+    const b = parseInt(hexVal[2] + hexVal[2], 16);
+    return { r, g, b };
   }
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+  if (hexVal.length === 6) {
+    const r = parseInt(hexVal.slice(0, 2), 16);
+    const g = parseInt(hexVal.slice(2, 4), 16);
+    const b = parseInt(hexVal.slice(4, 6), 16);
+    return { r, g, b };
+  }
+
+  return null; // Invalid hex
 };

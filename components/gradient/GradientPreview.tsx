@@ -1,15 +1,18 @@
+// src/components/gradient/GradientPreview.tsx
 import React, { FC } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 interface GradientPreviewProps {
   cssForBefore: string;
   cssForAfter: string;
+  railGradientCss: string;
+  hoveredPosition: number | null; // ✅ New prop for hover
 }
 
 export const GradientPreview: FC<GradientPreviewProps> = ({
   cssForBefore,
   cssForAfter,
+  hoveredPosition,
 }) => {
   const beforeStyles = cssForBefore.replace(
     ".your-element",
@@ -19,43 +22,30 @@ export const GradientPreview: FC<GradientPreviewProps> = ({
 
   return (
     <>
-      {/* Inject the dynamic styles. */}
       <style>{beforeStyles}</style>
       <style>{afterStyles}</style>
 
-      <Card className="w-full h-full overflow-hidden">
+      {/* Clean, borderless card */}
+      <Card className="relative z-10 w-full h-[500px] max-h-[500px] overflow-hidden transition-all duration-300">
         <CardContent className="p-0 w-full h-full">
           <div
-            id="preview-hero-bg" // This ID is targeted by the <style>
-            className="relative w-full h-full flex items-center justify-center p-8 overflow-hidden"
+            id="preview-hero-bg"
+            className="relative w-full h-full overflow-hidden"
             style={{ position: "relative", zIndex: 0 }}
           >
-            {/* ::before (z-index: 1) has gradient + filters */}
-            {/* ::after (z-index: 2) has noise + opacity */}
+            {/* ::before and ::after are applied here */}
 
+            {/* ✅ New Spotlight Element */}
             <div
-              className="w-full max-w-2xl text-center text-white"
-              style={{ position: "relative", zIndex: 10 }}
-            >
-              <h1
-                className="text-5xl font-bold"
-                style={{ textShadow: "0 2px 4px rgba(0,0,0,0.3)" }}
-              >
-                Your Website Hero
-              </h1>
-              <p
-                className="mt-4 text-xl opacity-90"
-                style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
-              >
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Itaque
-                voluptatum tempora, quas libero incidunt, blanditiis suscipit
-                autem non aut exercitationem dicta magni officiis voluptas
-                maiores impedit, quibusdam modi esse quidem.
-              </p>
-              <Button className="mt-8" size="lg">
-                Get Started
-              </Button>
-            </div>
+              className="absolute inset-0 z-30 transition-opacity duration-100 pointer-events-none"
+              style={{
+                background: `radial-gradient(circle at ${
+                  hoveredPosition ?? 50
+                }% 50%, transparent 0%, transparent 10%, rgba(0,0,0,0.7) 30%)`,
+                opacity: hoveredPosition !== null ? 1 : 0,
+                backdropFilter: "blur(2px)",
+              }}
+            />
           </div>
         </CardContent>
       </Card>

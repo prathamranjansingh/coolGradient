@@ -1,5 +1,4 @@
 // src/hooks/useGradientState.ts
-
 import { useReducer, Dispatch } from "react";
 import {
   GradientState,
@@ -10,11 +9,13 @@ import {
 import { getRandomComplementaryColors } from "@/lib/color";
 
 const getInitialState = (): GradientState => {
-  const firstStopId = crypto.randomUUID();
+  // ✅ Use static IDs for initial state to prevent hydration errors
+  const firstStopId = "initial-stop-1";
+  const secondStopId = "initial-stop-2";
   return {
     stops: [
       { id: firstStopId, color: "#FF8A00", alpha: 1, position: 0 },
-      { id: crypto.randomUUID(), color: "#E52E71", alpha: 1, position: 100 },
+      { id: secondStopId, color: "#E52E71", alpha: 1, position: 100 },
     ],
     activeStopId: firstStopId,
     angle: 90,
@@ -129,6 +130,7 @@ export const gradientReducer = (
         ...state,
         filters: initialState.filters,
         vignette: initialState.vignette,
+        noise: initialState.noise,
       };
 
     case ActionType.RANDOMIZE:

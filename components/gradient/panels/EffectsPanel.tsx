@@ -1,5 +1,4 @@
 // src/components/gradient/panels/EffectsPanel.tsx
-
 import React, { FC, Dispatch, useCallback } from "react";
 import { GradientState, GradientActions, ActionType } from "@/types/gradient";
 import { Button } from "@/components/ui/button";
@@ -23,26 +22,45 @@ interface EffectsPanelProps {
 export const EffectsPanel: FC<EffectsPanelProps> = ({ state, dispatch }) => {
   const { filters, vignette, noise } = state;
 
-  const handleSliderChange = (
-    group: "filters" | "vignette" | "noise",
-    name: string
+  const handleSliderChange = <
+    G extends "filters" | "vignette" | "noise",
+    K extends G extends "filters"
+      ? keyof typeof state.filters
+      : G extends "vignette"
+      ? keyof typeof state.vignette
+      : keyof typeof state.noise
+  >(
+    group: G,
+    name: K
   ) => {
     return (value: number[] | string) => {
       // Ensure it's a number array for sliders
       const numValue =
         typeof value === "string" ? parseFloat(value) : (value as number[])[0];
 
-      const actionType =
-        group === "filters"
-          ? ActionType.SET_FILTER
-          : group === "vignette"
-          ? ActionType.SET_VIGNETTE
-          : ActionType.SET_NOISE;
-      dispatch({ type: actionType, payload: { key: name, value: numValue } });
+      if (group === "filters") {
+        dispatch({
+          type: ActionType.SET_FILTER,
+          payload: { key: name as keyof typeof state.filters, value: numValue },
+        });
+      } else if (group === "vignette") {
+        dispatch({
+          type: ActionType.SET_VIGNETTE,
+          payload: {
+            key: name as keyof typeof state.vignette,
+            value: numValue,
+          },
+        });
+      } else if (group === "noise") {
+        dispatch({
+          type: ActionType.SET_NOISE,
+          payload: { key: name as keyof typeof state.noise, value: numValue },
+        });
+      }
     };
   };
 
-  const handleSelectChange = (name: string) => {
+  const handleSelectChange = <K extends keyof typeof state.noise>(name: K) => {
     return (value: string) => {
       dispatch({ type: ActionType.SET_NOISE, payload: { key: name, value } });
     };
