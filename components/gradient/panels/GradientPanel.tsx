@@ -1,4 +1,5 @@
-// src/components/gradient/panels/GradientPanel.tsx
+"use client";
+
 import React, { FC, Dispatch, useCallback } from "react";
 import {
   GradientState,
@@ -18,7 +19,6 @@ interface GradientPanelProps {
   dispatch: Dispatch<GradientActions>;
   sortedStops: ColorStop[];
   railGradientCss: string;
-  // ✅ New props for hover
   onGraphHover: (position: number) => void;
   onGraphLeave: () => void;
 }
@@ -105,6 +105,15 @@ export const GradientPanel: FC<GradientPanelProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* ✅ Graph is now at the top */}
+      <ColorChart
+        data={chartData}
+        stops={sortedStops}
+        onHover={onGraphHover}
+        onLeave={onGraphLeave}
+      />
+
+      {/* Type (Linear/Radial) */}
       <div className="space-y-2">
         <Label>Type</Label>
         <div className="flex gap-2">
@@ -148,6 +157,7 @@ export const GradientPanel: FC<GradientPanelProps> = ({
         </div>
       </div>
 
+      {/* Angle */}
       {type === "linear" && (
         <ControlInput
           label="Angle"
@@ -166,6 +176,7 @@ export const GradientPanel: FC<GradientPanelProps> = ({
         />
       )}
 
+      {/* Color Stops Rail */}
       <div className="space-y-2">
         <Label>Color Stops</Label>
         <GradientRail
@@ -178,14 +189,7 @@ export const GradientPanel: FC<GradientPanelProps> = ({
         />
       </div>
 
-      {/* ✅ Graph is now here, above the editor */}
-      <ColorChart
-        data={chartData}
-        stops={sortedStops}
-        onHover={onGraphHover}
-        onLeave={onGraphLeave}
-      />
-
+      {/* Color Stop Editor */}
       <ColorStopEditor
         stop={activeStop}
         onChange={handleStopChange}

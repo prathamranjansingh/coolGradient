@@ -1,17 +1,19 @@
-// src/components/gradient/panels/ColorChart.tsx
 "use client";
 
-import React, { FC } from "react";
+import React, { FC, useState, useEffect, useRef } from "react";
 import {
-  AreaChart,
-  Area,
-  Line,
+  LineChart,
+  CartesianGrid,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
+  Line,
   TooltipProps,
 } from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+} from "@/components/ui/chart";
 import { ColorStop } from "@/types/gradient";
 import { ColorSample } from "@/hooks/useGradientSampler";
 import { hexToRgb, rgbToCssString } from "@/lib/color";
@@ -19,143 +21,224 @@ import { hexToRgb, rgbToCssString } from "@/lib/color";
 interface ColorChartProps {
   data: ColorSample[];
   stops: ColorStop[];
-  // ✅ New props for hover
   onHover: (position: number) => void;
   onLeave: () => void;
 }
 
-// Custom Tooltip (same as before)
-const CustomTooltip: FC<TooltipProps<number, string>> = (props) => {
-  const { active, payload } = props as any;
+const chartConfig = {
+  r: {
+    label: "Red",
+    color: "var(--chart-1)",
+  },
+  g: {
+    label: "Green",
+    color: "var(--chart-2)",
+  },
+  b: {
+    label: "Blue",
+    color: "var(--chart-3)",
+  },
+} satisfies ChartConfig;
+
+// This is the custom tooltip component
+const CustomGradientTooltip: FC<
+  TooltipProps<number, string> & {
+    // ✅ We just need to know which hex is "copied"
+    copiedHex: string | null;
+  }
+> = ({ active, payload, copiedHex }) => {
   if (active && payload && payload.length) {
     const data: ColorSample = payload[0].payload;
     const rgb = rgbToCssString(data.r, data.g, data.b);
+    const isCopied = copiedHex === data.hex;
 
     return (
-      <div className="p-2 bg-background/80 backdrop-blur-sm border rounded-lg shadow-lg">
-        <div className="flex items-center gap-2 mb-1">
+      // ✅ Glassmorphism tooltip
+      <div className="p-3 bg-background/50 backdrop-blur-lg border border-border rounded-lg shadow-xl w-[200px] text-sm">
+        <div className="flex items-center gap-2 mb-2 pb-2 border-b">
           <div
             className="w-4 h-4 rounded-full border"
             style={{ backgroundColor: data.hex }}
           />
-          <p className="text-sm font-bold">{data.hex}</p>
+          <div className="flex-1">
+            <p className="font-bold">{data.hex}</p>
+            <p className="text-xs text-muted-foreground">{`Position: ${data.pos.toFixed(
+              0
+            )}%`}</p>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground">{`Position: ${data.pos.toFixed(
-          0
-        )}%`}</p>
-        <p className="text-sm font-mono text-muted-foreground">{rgb}</p>
-        <div className="mt-2 border-t pt-2 space-y-1">
-          <p className="text-xs" style={{ color: "rgb(255, 0, 0)" }}>
-            {`Red: ${data.r}`}
-          </p>
-          <p className="text-xs" style={{ color: "rgb(0, 255, 0)" }}>
-            {`Green: ${data.g}`}
-          </p>
-          <p className="text-xs" style={{ color: "rgb(0, 0, 255)" }}>
-            {`Blue: ${data.b}`}
-          </p>
+
+        <div className="space-y-1">
+          {/* Red */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: "var(--color-r)" }}
+              />
+              <span
+                className="font-semibold"
+                style={{ color: "var(--color-r)" }}
+              >
+                Red
+              </span>
+            </div>
+            <span className="font-mono">{data.r}</span>
+          </div>
+          {/* Green */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: "var(--color-g)" }}
+              />
+              <span
+                className="font-semibold"
+                style={{ color: "var(--color-g)" }}
+              >
+                Green
+              </span>
+            </div>
+            <span className="font-mono">{data.g}</span>
+          </div>
+          {/* Blue */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: "var(--color-b)" }}
+              />
+              <span
+                className="font-semibold"
+                style={{ color: "var(--color-b)" }}
+              >
+                Blue
+              </span>
+            </div>
+            <span className="font-mono">{data.b}</span>
+          </div>
         </div>
+
+        {/* ✅ Updated helper text */}
+        <p className="text-xs text-muted-foreground text-center pt-2 border-t mt-2">
+          {isCopied ? "Copied!" : "Press Ctrl+C to copy HEX"}
+        </p>
       </div>
     );
   }
   return null;
 };
 
+// This is the main Chart component
 export const ColorChart: FC<ColorChartProps> = ({
   data,
   stops,
   onHover,
   onLeave,
 }) => {
-  // ✅ Handle mouse move to find position
+  const [copiedHex, setCopiedHex] = useState<string | null>(null);
+  // ✅ Ref to store the currently hovered color data
+  const hoveredSampleRef = useRef<ColorSample | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+C or Cmd+C
+      if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
+        // Check if the mouse is currently over the chart
+        if (hoveredSampleRef.current) {
+          e.preventDefault(); // Stop the browser from its default copy
+          const hex = hoveredSampleRef.current.hex;
+          navigator.clipboard.writeText(hex);
+          setCopiedHex(hex);
+          setTimeout(() => setCopiedHex(null), 2000);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []); // Empty dependency array, runs only once
+
   const handleMouseMove = (e: any) => {
     if (e && e.activePayload && e.activePayload.length) {
-      const pos = e.activePayload[0].payload.pos;
-      onHover(pos);
+      const sample: ColorSample = e.activePayload[0].payload;
+      onHover(sample.pos);
+      // ✅ Update the ref with the current color data
+      hoveredSampleRef.current = sample;
     }
+  };
+
+  const handleMouseLeave = () => {
+    onLeave();
+    // ✅ Clear the ref when the mouse leaves
+    hoveredSampleRef.current = null;
   };
 
   return (
     <div className="w-full h-[150px] bg-muted/50 rounded-lg p-2 border">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
+      <ChartContainer
+        config={chartConfig}
+        className="aspect-auto h-[100%] w-full"
+      >
+        <LineChart
           data={data}
           margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
-          onMouseMove={handleMouseMove} // ✅ Call handler
-          onMouseLeave={onLeave} // ✅ Call handler
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave} // ✅ Use our new leave handler
         >
-          <defs>
-            <linearGradient id="colorGradient" x1="0" y1="0" x2="1" y2="0">
-              {stops.map((stop) => {
-                const rgb = hexToRgb(stop.color);
-                const color = rgb
-                  ? `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`
-                  : "#000000";
-                return (
-                  <stop
-                    key={stop.id}
-                    offset={`${stop.position}%`}
-                    stopColor={color}
-                    stopOpacity={stop.alpha}
-                  />
-                );
-              })}
-            </linearGradient>
-          </defs>
-
+          <CartesianGrid vertical={false} />
           <XAxis
             dataKey="pos"
-            type="number"
-            domain={[0, 100]}
-            tick={false}
+            tickLine={false}
             axisLine={false}
+            tickMargin={8}
+            tickFormatter={(value) => `${value.toFixed(0)}%`}
+            allowDuplicatedCategory={false}
           />
           <YAxis
             type="number"
             domain={[0, 255]}
             stroke="hsl(var(--muted-foreground))"
             fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
           />
 
-          <Tooltip content={<CustomTooltip />} />
-
-          {/* ✅ Gradient area is now semi-transparent */}
-          <Area
-            type="monotone"
-            dataKey="r" // Use any key, it's just for the shape
-            stroke="transparent"
-            fill="url(#colorGradient)"
-            fillOpacity={0.4} // ✅ Make it see-through
-            isAnimationActive={false}
+          <ChartTooltip
+            cursor={true}
+            // ✅ Pass the copiedHex state to the tooltip
+            content={(<CustomGradientTooltip copiedHex={copiedHex} />) as any}
           />
 
-          {/* Lines on top */}
           <Line
-            type="monotone"
             dataKey="r"
-            stroke="rgb(255, 0, 0)"
-            strokeWidth={2}
+            type="monotone"
+            stroke="var(--color-r)"
+            strokeWidth={2.5}
             dot={false}
             isAnimationActive={false}
           />
           <Line
-            type="monotone"
             dataKey="g"
-            stroke="rgb(0, 255, 0)"
-            strokeWidth={2}
+            type="monotone"
+            stroke="var(--color-g)"
+            strokeWidth={2.5}
             dot={false}
             isAnimationActive={false}
           />
           <Line
-            type="monotone"
             dataKey="b"
-            stroke="rgb(0, 0, 255)"
-            strokeWidth={2}
+            type="monotone"
+            stroke="var(--color-b)"
+            strokeWidth={2.5}
             dot={false}
             isAnimationActive={false}
           />
-        </AreaChart>
-      </ResponsiveContainer>
+        </LineChart>
+      </ChartContainer>
     </div>
   );
 };

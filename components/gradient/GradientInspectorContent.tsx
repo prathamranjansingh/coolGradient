@@ -19,9 +19,9 @@ interface GradientInspectorContentProps {
   sortedStops: ColorStop[];
   railGradientCss: string;
   cssExportString: string;
-  // ✅ New props for hover
   onGraphHover: (position: number) => void;
   onGraphLeave: () => void;
+  isPreviewMode: boolean;
 }
 
 export const GradientInspectorContent: FC<GradientInspectorContentProps> = ({
@@ -32,28 +32,22 @@ export const GradientInspectorContent: FC<GradientInspectorContentProps> = ({
   cssExportString,
   onGraphHover,
   onGraphLeave,
+  isPreviewMode,
 }) => {
   const handleRandomize = useCallback(
     () => dispatch({ type: ActionType.RANDOMIZE, payload: { newState: {} } }),
     [dispatch]
   );
 
-  const isPreviewMode =
-    typeof window !== "undefined" &&
-    document.body.dataset.livePreview === "true";
-
   return (
+    // ✅ Main background is now transparent
     <div
-      className={`w-full lg:w-[450px] h-full flex flex-col rounded-lg overflow-hidden ${
-        isPreviewMode ? "bg-transparent" : "bg-background"
-      }`}
+      className={`w-full lg:w-[450px] h-full flex flex-col rounded-lg overflow-hidden bg-transparent`}
     >
       {/* Header */}
       <div
         className={`flex flex-row items-center justify-between p-4 h-[69px] flex-shrink-0 ${
-          isPreviewMode
-            ? "bg-transparent border-transparent"
-            : "bg-background border-b border-border"
+          isPreviewMode ? "border-b border-white/10" : "border-b border-border"
         }`}
       >
         <h1 className="text-xl font-semibold">Inspector</h1>
@@ -71,7 +65,11 @@ export const GradientInspectorContent: FC<GradientInspectorContentProps> = ({
         defaultValue="gradient"
         className="flex-1 flex flex-col overflow-hidden"
       >
-        <TabsList className="m-4">
+        <TabsList
+          className={`m-4 ${
+            isPreviewMode ? "bg-white/20" : "bg-muted" // ✅ Glassmorphic tab list
+          }`}
+        >
           <TabsTrigger value="gradient" className="flex-1">
             Gradient
           </TabsTrigger>
@@ -84,20 +82,21 @@ export const GradientInspectorContent: FC<GradientInspectorContentProps> = ({
         </TabsList>
 
         <div className="flex-1 overflow-y-auto">
-          <TabsContent value="gradient" className="p-6 pt-2">
+          {/* ✅ Tab content is transparent */}
+          <TabsContent value="gradient" className="p-6 pt-2 bg-transparent">
             <GradientPanel
               state={state}
               dispatch={dispatch}
               sortedStops={sortedStops}
               railGradientCss={railGradientCss}
-              onGraphHover={onGraphHover} // ✅ Pass props
-              onGraphLeave={onGraphLeave} // ✅ Pass props
+              onGraphHover={onGraphHover}
+              onGraphLeave={onGraphLeave}
             />
           </TabsContent>
-          <TabsContent value="effects" className="p-6 pt-2">
+          <TabsContent value="effects" className="p-6 pt-2 bg-transparent">
             <EffectsPanel state={state} dispatch={dispatch} />
           </TabsContent>
-          <TabsContent value="export" className="p-6 pt-2">
+          <TabsContent value="export" className="p-6 pt-2 bg-transparent">
             <ExportPanel cssExportString={cssExportString} />
           </TabsContent>
         </div>

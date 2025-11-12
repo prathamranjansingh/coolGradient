@@ -13,9 +13,9 @@ interface ResponsiveInspectorProps {
   railGradientCss: string;
   cssExportString: string;
   isDesktop: boolean;
-  // ✅ New props for hover
   onGraphHover: (position: number) => void;
   onGraphLeave: () => void;
+  isPreviewMode: boolean; // This prop is now used
 }
 
 export const ResponsiveInspector: FC<ResponsiveInspectorProps> = ({
@@ -27,6 +27,7 @@ export const ResponsiveInspector: FC<ResponsiveInspectorProps> = ({
   isDesktop,
   onGraphHover,
   onGraphLeave,
+  isPreviewMode,
 }) => {
   const inspectorContentProps = {
     state,
@@ -36,6 +37,7 @@ export const ResponsiveInspector: FC<ResponsiveInspectorProps> = ({
     cssExportString,
     onGraphHover,
     onGraphLeave,
+    isPreviewMode, // Pass it down
   };
 
   if (isDesktop) {
@@ -46,8 +48,15 @@ export const ResponsiveInspector: FC<ResponsiveInspectorProps> = ({
           sticky top-10 
           z-10
           flex flex-col
-          bg-background border border-border rounded-lg
+          rounded-lg
           max-h-[calc(100vh-80px-2.5rem)]
+          transition-all duration-300
+          overflow-hidden
+          ${
+            isPreviewMode // ✅ Apply glassmorphism or solid background
+              ? "bg-white/20 backdrop-blur-xl border border-white/10" // More transparent
+              : "bg-background border border-border"
+          }
         `}
       >
         <GradientInspectorContent {...inspectorContentProps} />
