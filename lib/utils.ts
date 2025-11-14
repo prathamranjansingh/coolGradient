@@ -5,17 +5,46 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+let webglCheckCache: { ok: boolean; message: string } | null = null;
+
 export const checkWebGLSync = (): { ok: boolean; message: string } => {
+  if (webglCheckCache) {
+    return webglCheckCache;
+  }
+
   try {
     const c = document.createElement("canvas");
-    const supported = !!(
-      c.getContext("webgl") || c.getContext("experimental-webgl")
-    );
-    return supported
+    const gl =
+      c.getContext("webgl", {
+        failIfMajorPerformanceCaveat: false,
+      }) ||
+      c.getContext("experimental-webgl", {
+        failIfMajorPerformanceCaveat: false,
+      });
+
+    const supported = !!gl;
+
+    // Clean up the test context immediately
+    if (gl && "getExtension" in gl) {
+      const loseContext = (gl as WebGLRenderingContext).getExtension(
+        "WEBGL_lose_context"
+      );
+      if (loseContext) {
+        loseContext.loseContext();
+      }
+    }
+
+    webglCheckCache = supported
       ? { ok: true, message: "OK" }
       : { ok: false, message: "WebGL not supported by this browser." };
+
+    return webglCheckCache;
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+    webglCheckCache = {
+      ok: false,
+      message: e instanceof Error ? e.message : String(e),
+    };
+    return webglCheckCache;
   }
 };
 

@@ -1,185 +1,253 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback } from "react";
 import { vertexShaderSource, fragmentShaderSource } from "@/lib/shaders";
-import { safeCompileShader, hexToRgb, checkWebGLSync } from "@/lib/utils";
+import { hexToRgb, safeCompileShader } from "@/lib/utils";
 import { MAX_STOPS } from "@/lib/constants";
-import {
-  GradientMode,
-  GradientStop,
-  MeshPoint,
-  RadialPoints,
-  Filters,
-} from "@/lib/type";
 
-type WebGLState = {
-  mode: GradientMode;
-  stops: GradientStop[];
-  meshPoints: MeshPoint[];
-  radialPoints: RadialPoints;
-  filters: Filters;
-};
+interface WebGLState {
+  mode: string;
+  stops: any[];
+  meshPoints: any[];
+  radialPoints: any;
+  filters: any;
+}
 
-type WebGLStatus = { ok: boolean; message: string };
+interface WebGLStatus {
+  ok: boolean;
+  message: string;
+}
 
-export function useWebGLRenderer(initialState: WebGLState) {
+export const useWebGLRenderer = (state: WebGLState) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
   const programRef = useRef<WebGLProgram | null>(null);
-  const stateRef = useRef(initialState);
-  const glStatusRef = useRef<WebGLStatus>(checkWebGLSync());
-  const rafRef = useRef(0);
-
-  // Keep stateRef updated without triggering re-renders
-  useEffect(() => {
-    stateRef.current = initialState;
-  }, [initialState]);
+  const uniformsRef = useRef<any>({});
+  const statusRef = useRef<WebGLStatus>({
+    ok: false,
+    message: "Not initialized",
+  });
+  const initedRef = useRef(false);
 
   const initWebGL = useCallback(() => {
+    // Prevent multiple initializations
+    if (initedRef.current) {
+      return true;
+    }
+
     const canvas = canvasRef.current;
-    if (!canvas || !glStatusRef.current.ok) return;
+    if (!canvas) return false;
 
     try {
-      const gl = canvas.getContext("webgl", {
-        antialias: true,
-        preserveDrawingBuffer: true,
-        alpha: false,
-        premultipliedAlpha: false,
-      });
-      if (!gl) throw new Error("WebGL context creation failed");
+      // Get WebGL context with proper settings to prevent context loss
+      const gl =
+        (canvas.getContext("webgl", {
+          alpha: false,
+          antialias: true,
+          preserveDrawingBuffer: true,
+          powerPreference: "high-performance",
+        }) as WebGLRenderingContext) ||
+        (canvas.getContext("experimental-webgl", {
+          alpha: false,
+          antialias: true,
+          preserveDrawingBuffer: true,
+          powerPreference: "high-performance",
+        }) as WebGLRenderingContext);
 
-      const v = safeCompileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-      const f = safeCompileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-
-      const program = gl.createProgram();
-      if (!program) throw new Error("Could not create program");
-      gl.attachShader(program, v);
-      gl.attachShader(program, f);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS))
-        throw new Error(gl.getProgramInfoLog(program) || "Program link failed");
-
-      gl.useProgram(program);
-      const posLoc = gl.getAttribLocation(program, "a_position");
-      const buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-        gl.STATIC_DRAW
-      );
-      gl.enableVertexAttribArray(posLoc);
-      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+      if (!gl) {
+        statusRef.current = { ok: false, message: "WebGL not supported" };
+        return false;
+      }
 
       glRef.current = gl;
+
+      // Compile shaders
+      const vs = safeCompileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+      const fs = safeCompileShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        fragmentShaderSource
+      );
+
+      // Create program
+      const program = gl.createProgram();
+      if (!program) throw new Error("Could not create program");
+
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        const err = gl.getProgramInfoLog(program);
+        throw new Error(err || "Program link failed");
+      }
+
       programRef.current = program;
-      glStatusRef.current = { ok: true, message: "" };
+      gl.useProgram(program);
+
+      // Set up geometry
+      const positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      const positions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+      const positionLoc = gl.getAttribLocation(program, "a_position");
+      gl.enableVertexAttribArray(positionLoc);
+      gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+      // Cache uniform locations
+      uniformsRef.current = {
+        mode: gl.getUniformLocation(program, "u_mode"),
+        stopCount: gl.getUniformLocation(program, "u_stopCount"),
+        colors: gl.getUniformLocation(program, "u_colors"),
+        positions: gl.getUniformLocation(program, "u_positions"),
+        points: gl.getUniformLocation(program, "u_points"),
+        intensities: gl.getUniformLocation(program, "u_intensities"),
+        radii: gl.getUniformLocation(program, "u_radii"),
+        brightness: gl.getUniformLocation(program, "u_brightness"),
+        contrast: gl.getUniformLocation(program, "u_contrast"),
+        saturation: gl.getUniformLocation(program, "u_saturation"),
+        temperature: gl.getUniformLocation(program, "u_temperature"),
+        tint: gl.getUniformLocation(program, "u_tint"),
+        noise: gl.getUniformLocation(program, "u_noise"),
+        time: gl.getUniformLocation(program, "u_time"),
+      };
+
+      statusRef.current = { ok: true, message: "WebGL initialized" };
+      initedRef.current = true;
       return true;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      glStatusRef.current = { ok: false, message: errorMsg };
-      console.error("WebGL init failed:", err);
+      console.error("WebGL init error:", err);
+      statusRef.current = {
+        ok: false,
+        message: err instanceof Error ? err.message : String(err),
+      };
       return false;
     }
-  }, []);
+  }, []); // Empty deps - only init once
 
   const renderGL = useCallback(() => {
     const gl = glRef.current;
     const program = programRef.current;
-    const { mode, stops, meshPoints, radialPoints, filters } = stateRef.current;
+    const uniforms = uniformsRef.current;
 
-    if (!gl || !program) return;
+    if (!gl || !program || !statusRef.current.ok) return;
 
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    gl.uniform1i(
-      gl.getUniformLocation(program, "u_mode"),
-      mode === "linear" ? 0 : mode === "radial" ? 1 : 2
-    );
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
 
-    const colors = new Float32Array(MAX_STOPS * 3);
-    const positionsArr = new Float32Array(MAX_STOPS);
-    const pointsArr = new Float32Array(MAX_STOPS * 2);
-    const intensitiesArr = new Float32Array(MAX_STOPS);
-    const radiiArr = new Float32Array(MAX_STOPS);
-    let stopCount = 0;
+      gl.useProgram(program);
 
-    if (mode === "mesh") {
-      const meshData = meshPoints.slice(0, MAX_STOPS);
-      stopCount = meshData.length;
-      meshData.forEach((p, i) => {
-        const c = hexToRgb(p.color);
-        colors[i * 3 + 0] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
-        pointsArr[i * 2 + 0] = p.x;
-        pointsArr[i * 2 + 1] = 1.0 - p.y; // Flip Y
-        intensitiesArr[i] = p.intensity;
-        radiiArr[i] = p.radius;
-      });
-    } else {
-      const stopData = stops.slice(0, MAX_STOPS);
-      stopCount = stopData.length;
-      stopData.forEach((s, i) => {
-        const c = hexToRgb(s.color);
-        colors[i * 3 + 0] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
-        positionsArr[i] = s.position;
-        intensitiesArr[i] = s.intensity;
-      });
+      // Set mode
+      const modeIndex =
+        state.mode === "linear" ? 0 : state.mode === "radial" ? 1 : 2;
+      gl.uniform1i(uniforms.mode, modeIndex);
 
-      if (mode === "linear") {
-        const first = stopData[0];
-        const last = stopData[stopData.length - 1];
-        pointsArr[0] = first.x;
-        pointsArr[1] = 1.0 - first.y; // Flip Y
-        pointsArr[2] = last.x;
-        pointsArr[3] = 1.0 - last.y; // Flip Y
+      // Prepare data based on mode
+      if (state.mode === "mesh") {
+        const count = Math.min(state.meshPoints.length, MAX_STOPS);
+        gl.uniform1i(uniforms.stopCount, count);
+
+        const colors = new Float32Array(MAX_STOPS * 3);
+        const points = new Float32Array(MAX_STOPS * 2);
+        const intensities = new Float32Array(MAX_STOPS);
+        const radii = new Float32Array(MAX_STOPS);
+
+        for (let i = 0; i < count; i++) {
+          const p = state.meshPoints[i];
+          const rgb = hexToRgb(p.color);
+          colors[i * 3] = rgb.r;
+          colors[i * 3 + 1] = rgb.g;
+          colors[i * 3 + 2] = rgb.b;
+          // FIX: Invert Y coordinate for WebGL (0,0 is bottom-left in WebGL, top-left in canvas)
+          points[i * 2] = p.x;
+          points[i * 2 + 1] = 1.0 - p.y;
+          intensities[i] = p.intensity;
+          radii[i] = p.radius;
+        }
+
+        gl.uniform3fv(uniforms.colors, colors);
+        gl.uniform2fv(uniforms.points, points);
+        gl.uniform1fv(uniforms.intensities, intensities);
+        gl.uniform1fv(uniforms.radii, radii);
       } else {
-        pointsArr[0] = radialPoints.center.x;
-        pointsArr[1] = 1.0 - radialPoints.center.y; // Flip Y
-        pointsArr[2] = radialPoints.focus.x;
-        pointsArr[3] = 1.0 - radialPoints.focus.y; // Flip Y
+        const count = Math.min(state.stops.length, MAX_STOPS);
+        gl.uniform1i(uniforms.stopCount, count);
+
+        const colors = new Float32Array(MAX_STOPS * 3);
+        const positions = new Float32Array(MAX_STOPS);
+        const intensities = new Float32Array(MAX_STOPS);
+
+        for (let i = 0; i < count; i++) {
+          const s = state.stops[i];
+          const rgb = hexToRgb(s.color);
+          colors[i * 3] = rgb.r;
+          colors[i * 3 + 1] = rgb.g;
+          colors[i * 3 + 2] = rgb.b;
+          positions[i] = s.position;
+          intensities[i] = s.intensity;
+        }
+
+        gl.uniform3fv(uniforms.colors, colors);
+        gl.uniform1fv(uniforms.positions, positions);
+        gl.uniform1fv(uniforms.intensities, intensities);
+
+        const points = new Float32Array(MAX_STOPS * 2);
+        if (state.mode === "linear") {
+          // FIX: Invert Y coordinates for linear gradient
+          points[0] = state.stops[0]?.x ?? 0;
+          points[1] = 1.0 - (state.stops[0]?.y ?? 0);
+          points[2] = state.stops[state.stops.length - 1]?.x ?? 1;
+          points[3] = 1.0 - (state.stops[state.stops.length - 1]?.y ?? 1);
+        } else {
+          // FIX: Invert Y coordinates for radial gradient
+          points[0] = state.radialPoints.center.x;
+          points[1] = 1.0 - state.radialPoints.center.y;
+          points[2] = state.radialPoints.focus.x;
+          points[3] = 1.0 - state.radialPoints.focus.y;
+        }
+        gl.uniform2fv(uniforms.points, points);
       }
+
+      // Set filters
+      gl.uniform1f(uniforms.brightness, state.filters.brightness);
+      gl.uniform1f(uniforms.contrast, state.filters.contrast);
+      gl.uniform1f(uniforms.saturation, state.filters.saturation);
+      gl.uniform1f(uniforms.temperature, state.filters.temperature);
+      gl.uniform1f(uniforms.tint, state.filters.tint);
+      gl.uniform1f(uniforms.noise, state.filters.noise);
+      gl.uniform1f(uniforms.time, performance.now() * 0.001);
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    } catch (err) {
+      console.error("Render error:", err);
+    }
+  }, [state]);
+
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    const gl = glRef.current;
+    const program = programRef.current;
+
+    if (gl && program) {
+      gl.deleteProgram(program);
     }
 
-    gl.uniform1i(gl.getUniformLocation(program, "u_stopCount"), stopCount);
-    gl.uniform3fv(gl.getUniformLocation(program, "u_colors"), colors);
-    gl.uniform1fv(gl.getUniformLocation(program, "u_positions"), positionsArr);
-    gl.uniform2fv(gl.getUniformLocation(program, "u_points"), pointsArr);
-    gl.uniform1fv(
-      gl.getUniformLocation(program, "u_intensities"),
-      intensitiesArr
-    );
-    gl.uniform1fv(gl.getUniformLocation(program, "u_radii"), radiiArr);
-
-    Object.entries(filters).forEach(([key, value]) => {
-      gl.uniform1f(gl.getUniformLocation(program, `u_${key}`), value);
-    });
-
-    gl.uniform1f(
-      gl.getUniformLocation(program, "u_time"),
-      (Date.now() / 1000) % 3600
-    );
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    glRef.current = null;
+    programRef.current = null;
+    uniformsRef.current = {};
+    initedRef.current = false;
   }, []);
 
-  // Render loop
-  useEffect(() => {
-    if (!glStatusRef.current.ok) return;
-
-    const loop = () => {
-      renderGL();
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [renderGL]);
-
-  return { canvasRef, initWebGL, renderGL, glStatus: glStatusRef.current };
-}
+  return {
+    canvasRef,
+    glRef,
+    initWebGL,
+    renderGL,
+    cleanup,
+    glStatus: statusRef.current,
+  };
+};

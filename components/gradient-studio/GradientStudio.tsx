@@ -34,7 +34,6 @@ import { Toolbar } from "./Toolbar";
 import { CanvasArea } from "./CanvasArea";
 import { ControlPanel } from "./ControlPanel";
 import { Footer } from "./Footer";
-import { Collapsible } from "./ui/Collapsible";
 
 export default function GradientStudio() {
   // --- Core Application State ---
@@ -60,13 +59,13 @@ export default function GradientStudio() {
   );
 
   // --- Core Logic Hooks ---
-  const webGLState = useMemo(
-    () => ({ mode, stops: sortedStops, meshPoints, radialPoints, filters }),
-    [mode, sortedStops, meshPoints, radialPoints, filters]
-  );
-
-  const { canvasRef, initWebGL, renderGL, glStatus, glRef } =
-    useWebGLRenderer(webGLState);
+  const { canvasRef, initWebGL, renderGL, glStatus, glRef, cleanup } =
+    useWebGLRenderer(
+      useMemo(
+        () => ({ mode, stops: sortedStops, meshPoints, radialPoints, filters }),
+        [mode, sortedStops, meshPoints, radialPoints, filters]
+      )
+    );
 
   const overlayState = useMemo(
     () => ({
@@ -94,14 +93,6 @@ export default function GradientStudio() {
   });
 
   // --- Resize Handler ---
-  //
-  // *** THIS IS THE FIX ***
-  //
-  // 'resizeCanvases' is now stable. It no longer depends on 'overlayState' or 'drawOverlay'.
-  // It only resizes the canvases and calls 'renderGL'.
-  // The 'drawOverlay' call is handled by its own separate useEffect below.
-  // This breaks the infinite loop.
-  //
   const resizeCanvases = useCallback(() => {
     const canvas = canvasRef.current;
     const overlay = overlayRef.current;
@@ -127,37 +118,117 @@ export default function GradientStudio() {
       overlay.style.height = `${rect.height}px`;
     }
 
-    // Only call renderGL. The overlay will be drawn by its own effect.
-    renderGL();
-  }, [canvasRef, overlayRef, isExporting, renderGL]); // Removed drawOverlay and overlayState
+    // safe to call renderGL (renderGL should be no-op if not ready)
+    try {
+      renderGL();
+    } catch (err) {
+      // keep safe — renderGL may throw if context not initialized yet
+      // eslint-disable-next-line no-console
+      console.warn("renderGL failed during resizeCanvases:", err);
+    }
+  }, [canvasRef, overlayRef, isExporting, renderGL]);
 
   // --- Effects ---
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Effect 1: Initialize WebGL and set up resizing.
-  // This now has a stable dependency array and will run ONLY ONCE.
+  // Initialize WebGL once and set up resize listener
   useEffect(() => {
     if (!isClient) return;
 
-    const success = initWebGL();
-    if (success) {
-      resizeCanvases(); // Call it once on init
-      window.addEventListener("resize", resizeCanvases);
-    }
+    let mounted = true;
+    let rafId: number | null = null;
+    let initialized = false;
 
-    return () => window.removeEventListener("resize", resizeCanvases);
-  }, [isClient, initWebGL, resizeCanvases]); // All dependencies are stable
+    const tryInit = () => {
+      // If component unmounted while waiting, bail out
+      if (!mounted) return;
 
-  // Effect 2: Redraw the 2D Overlay
-  // This runs *only* when the overlay's state changes.
+      const canvas = canvasRef.current;
+      const overlay = overlayRef.current;
+
+      // If either ref is not yet attached, try again next frame
+      if (!canvas || !overlay) {
+        rafId = requestAnimationFrame(tryInit);
+        return;
+      }
+
+      try {
+        // initWebGL may return boolean or throw; guard it
+        const success = initWebGL();
+        if (success) {
+          initialized = true;
+          // Resize once after successful init
+          resizeCanvases();
+          window.addEventListener("resize", resizeCanvases);
+        } else {
+          // initWebGL returned false — log for debugging
+          // eslint-disable-next-line no-console
+          console.error(
+            "initWebGL returned false: WebGL initialization failed."
+          );
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("initWebGL threw an error:", err);
+      }
+    };
+
+    // Start trying to init after mount
+    tryInit();
+
+    return () => {
+      mounted = false;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (initialized) {
+        window.removeEventListener("resize", resizeCanvases);
+      } else {
+        // ensure resize listener is removed in case it was added
+        window.removeEventListener("resize", resizeCanvases);
+      }
+      try {
+        cleanup();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("cleanup threw:", err);
+      }
+    };
+    // Intentionally include refs and handlers so effect retriggers if they change
+  }, [isClient, initWebGL, resizeCanvases, cleanup, canvasRef, overlayRef]);
+
+  // Redraw overlay when overlay state changes
   useEffect(() => {
     if (!isClient || isExporting) return;
-    drawOverlay(overlayState);
+    try {
+      drawOverlay(overlayState);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("drawOverlay failed:", err);
+    }
   }, [overlayState, drawOverlay, isClient, isExporting]);
 
-  // --- (State Updaters / Callbacks are unchanged) ---
+  // Trigger WebGL render when state changes
+  useEffect(() => {
+    if (!isClient || isExporting) return;
+    try {
+      renderGL();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("renderGL failed on state change:", err);
+    }
+  }, [
+    mode,
+    sortedStops,
+    meshPoints,
+    radialPoints,
+    filters,
+    renderGL,
+    isClient,
+    isExporting,
+  ]);
+
+  // --- State Updaters / Callbacks ---
 
   const addStop = useCallback(() => {
     if (stops.length >= MAX_STOPS) return;
@@ -251,11 +322,15 @@ export default function GradientStudio() {
   }, [randomizeGradient]);
 
   const exportAsPNG = useCallback(async () => {
-    if (!glStatus.ok || !canvasRef.current || !glRef.current) return;
+    if (!glStatus.ok || !canvasRef.current || !glRef.current) {
+      // eslint-disable-next-line no-console
+      console.warn("Export aborted: GL not ready or canvas missing.");
+      return;
+    }
 
     setIsExporting(true);
-    const canvas = canvasRef.current;
-    const gl = glRef.current;
+    const canvas = canvasRef.current!;
+    const gl = glRef.current!;
     const overlay = overlayRef.current;
 
     const { width: oldWidth, height: oldHeight } = previewSizeRef.current;
@@ -289,19 +364,35 @@ export default function GradientStudio() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Export failed:", err);
     }
 
+    // restore
     canvas.width = oldWidth;
     canvas.height = oldHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
     if (overlay) overlay.style.display = "block";
 
-    renderGL();
-    drawOverlay(overlayState);
+    try {
+      renderGL();
+      drawOverlay(overlayState);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("render/draw after export failed:", err);
+    }
 
     setIsExporting(false);
-  }, [exportSize, renderGL, drawOverlay, glStatus.ok, glRef, overlayState]);
+  }, [
+    exportSize,
+    renderGL,
+    drawOverlay,
+    glStatus.ok,
+    glRef,
+    overlayState,
+    canvasRef,
+    overlayRef,
+  ]);
 
   const updateSelectedPoint = useCallback(
     (key: string, value: any) => {
