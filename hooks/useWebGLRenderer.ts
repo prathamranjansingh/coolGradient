@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState } from "react";
 import { vertexShaderSource, fragmentShaderSource } from "@/lib/shaders";
 import { hexToRgb, safeCompileShader } from "@/lib/utils";
 import { MAX_STOPS } from "@/lib/constants";
@@ -21,20 +21,21 @@ export const useWebGLRenderer = (state: WebGLState) => {
   const glRef = useRef<WebGLRenderingContext | null>(null);
   const programRef = useRef<WebGLProgram | null>(null);
   const uniformsRef = useRef<any>({});
-  const statusRef = useRef<WebGLStatus>({
+
+  // Use state instead of ref so React knows when it changes
+  const [glStatus, setGLStatus] = useState<WebGLStatus>({
     ok: false,
     message: "Not initialized",
   });
-  const initedRef = useRef(false);
 
   const initWebGL = useCallback(() => {
-    // Prevent multiple initializations
-    if (initedRef.current) {
-      return true;
-    }
-
     const canvas = canvasRef.current;
     if (!canvas) return false;
+
+    // If already initialized and still valid, return true
+    if (glRef.current && programRef.current) {
+      return true;
+    }
 
     try {
       // Get WebGL context with proper settings to prevent context loss
@@ -53,7 +54,7 @@ export const useWebGLRenderer = (state: WebGLState) => {
         }) as WebGLRenderingContext);
 
       if (!gl) {
-        statusRef.current = { ok: false, message: "WebGL not supported" };
+        setGLStatus({ ok: false, message: "WebGL not supported" });
         return false;
       }
 
@@ -111,25 +112,24 @@ export const useWebGLRenderer = (state: WebGLState) => {
         time: gl.getUniformLocation(program, "u_time"),
       };
 
-      statusRef.current = { ok: true, message: "WebGL initialized" };
-      initedRef.current = true;
+      setGLStatus({ ok: true, message: "WebGL initialized" });
       return true;
     } catch (err) {
       console.error("WebGL init error:", err);
-      statusRef.current = {
+      setGLStatus({
         ok: false,
         message: err instanceof Error ? err.message : String(err),
-      };
+      });
       return false;
     }
-  }, []); // Empty deps - only init once
+  }, []); // Empty deps - only depends on refs
 
   const renderGL = useCallback(() => {
     const gl = glRef.current;
     const program = programRef.current;
     const uniforms = uniformsRef.current;
 
-    if (!gl || !program || !statusRef.current.ok) return;
+    if (!gl || !program) return;
 
     try {
       const canvas = canvasRef.current;
@@ -239,7 +239,7 @@ export const useWebGLRenderer = (state: WebGLState) => {
     glRef.current = null;
     programRef.current = null;
     uniformsRef.current = {};
-    initedRef.current = false;
+    setGLStatus({ ok: false, message: "Cleaned up" });
   }, []);
 
   return {
@@ -248,6 +248,6 @@ export const useWebGLRenderer = (state: WebGLState) => {
     initWebGL,
     renderGL,
     cleanup,
-    glStatus: statusRef.current,
+    glStatus, // Now returns state instead of ref
   };
 };

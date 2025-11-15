@@ -23,7 +23,7 @@ export function CanvasArea({
   glStatus,
 }: Props) {
   return (
-    <div className="bg-zinc-900 rounded-lg p-4">
+    <div className="p-4 rounded-lg w-full">
       <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
         <canvas
           ref={canvasRef}

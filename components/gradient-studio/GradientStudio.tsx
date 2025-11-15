@@ -23,20 +23,17 @@ import {
 } from "@/lib/type";
 import { randomColor } from "@/lib/utils";
 
-// Import Hooks
 import { useWebGLRenderer } from "@/hooks/useWebGLRenderer";
 import { useOverlayRenderer } from "@/hooks/useOverlayRenderer";
 import { useGradientInteractions } from "@/hooks/useGradientInteractions";
 
-// Import Components
-import { Header } from "./Header";
+import { Header } from "../layout/Header";
 import { Toolbar } from "./Toolbar";
 import { CanvasArea } from "./CanvasArea";
 import { ControlPanel } from "./ControlPanel";
 import { Footer } from "./Footer";
 
 export default function GradientStudio() {
-  // --- Core Application State ---
   const [mode, setMode] = useState<GradientMode>("linear");
   const [stops, setStops] = useState<GradientStop[]>(defaultStops);
   const [meshPoints, setMeshPoints] = useState<MeshPoint[]>(defaultMesh);
@@ -51,6 +48,10 @@ export default function GradientStudio() {
   const [exportSize, setExportSize] = useState({ width: 1920, height: 1080 });
   const [isClient, setIsClient] = useState(false);
   const previewSizeRef = useRef({ width: 0, height: 0 });
+
+  // State for Header
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // --- Memoized State ---
   const sortedStops = useMemo(
@@ -98,8 +99,11 @@ export default function GradientStudio() {
     const overlay = overlayRef.current;
     if (!canvas || !overlay || isExporting) return;
 
-    const rect = canvas.parentElement?.getBoundingClientRect();
-    if (!rect) return;
+    const container = canvas.parentElement?.parentElement;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(1, Math.floor(rect.width * dpr));
@@ -118,11 +122,9 @@ export default function GradientStudio() {
       overlay.style.height = `${rect.height}px`;
     }
 
-    // safe to call renderGL (renderGL should be no-op if not ready)
     try {
       renderGL();
     } catch (err) {
-      // keep safe — renderGL may throw if context not initialized yet
       // eslint-disable-next-line no-console
       console.warn("renderGL failed during resizeCanvases:", err);
     }
@@ -133,6 +135,16 @@ export default function GradientStudio() {
     setIsClient(true);
   }, []);
 
+  // Effect for mobile detection
+  useEffect(() => {
+    if (!isClient) return;
+    // 1024px is the default 'lg' breakpoint in Tailwind
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, [isClient]);
+
   // Initialize WebGL once and set up resize listener
   useEffect(() => {
     if (!isClient) return;
@@ -142,28 +154,23 @@ export default function GradientStudio() {
     let initialized = false;
 
     const tryInit = () => {
-      // If component unmounted while waiting, bail out
       if (!mounted) return;
 
       const canvas = canvasRef.current;
       const overlay = overlayRef.current;
 
-      // If either ref is not yet attached, try again next frame
       if (!canvas || !overlay) {
         rafId = requestAnimationFrame(tryInit);
         return;
       }
 
       try {
-        // initWebGL may return boolean or throw; guard it
         const success = initWebGL();
         if (success) {
           initialized = true;
-          // Resize once after successful init
-          resizeCanvases();
+          resizeCanvases(); // Resize once after successful init
           window.addEventListener("resize", resizeCanvases);
         } else {
-          // initWebGL returned false — log for debugging
           // eslint-disable-next-line no-console
           console.error(
             "initWebGL returned false: WebGL initialization failed."
@@ -175,7 +182,6 @@ export default function GradientStudio() {
       }
     };
 
-    // Start trying to init after mount
     tryInit();
 
     return () => {
@@ -184,7 +190,6 @@ export default function GradientStudio() {
       if (initialized) {
         window.removeEventListener("resize", resizeCanvases);
       } else {
-        // ensure resize listener is removed in case it was added
         window.removeEventListener("resize", resizeCanvases);
       }
       try {
@@ -194,7 +199,6 @@ export default function GradientStudio() {
         console.warn("cleanup threw:", err);
       }
     };
-    // Intentionally include refs and handlers so effect retriggers if they change
   }, [isClient, initWebGL, resizeCanvases, cleanup, canvasRef, overlayRef]);
 
   // Redraw overlay when overlay state changes
@@ -422,29 +426,32 @@ export default function GradientStudio() {
     [selectedPoint]
   );
 
-  // --- Render ---
-
   if (!isClient) {
     return (
-      <div className="max-w-7xl mx-auto">
-        <Header />
+      <div className="w-full mx-auto min-h-screen flex flex-col">
+        <Header
+          isPreviewMode={false}
+          onTogglePreview={() => {}}
+          isMobile={false}
+          onToggleMobileDrawer={() => {}}
+        />
         <div className="p-4 text-zinc-400">Loading Studio...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <Header />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Toolbar
-            mode={mode}
-            setMode={setMode}
-            onRandomize={randomizeGradient}
-            onToggleUI={() => setShowControls((v) => !v)}
-            showUI={showControls}
-          />
+    <div className="w-full flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
+      <Header
+        isPreviewMode={isPreviewMode}
+        onTogglePreview={() => setIsPreviewMode((v) => !v)}
+        isMobile={isMobile}
+        onToggleMobileDrawer={() => {}}
+      />
+
+      <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0">
+        {/* Canvas Area */}
+        <div className="flex items-center justify-center lg:border-r border-[#222222] lg:w-1/2 min-h-[50vh] lg:h-full">
           <CanvasArea
             canvasRef={canvasRef}
             overlayRef={overlayRef}
@@ -455,32 +462,52 @@ export default function GradientStudio() {
           />
         </div>
 
-        {showControls && (
-          <ControlPanel
-            mode={mode}
-            stops={stops}
-            meshPoints={meshPoints}
-            radialPoints={radialPoints}
-            filters={filters}
-            selectedPoint={selectedPoint}
-            isExporting={isExporting}
-            exportSize={exportSize}
-            glOK={glStatus.ok}
-            setStops={setStops}
-            setMeshPoints={setMeshPoints}
-            setFilters={setFilters}
-            setSelectedPoint={setSelectedPoint}
-            setExportSize={setExportSize}
-            addStop={addStop}
-            addMeshPoint={addMeshPoint}
-            removeStop={removeStop}
-            removeMeshPoint={removeMeshPoint}
-            onReset={resetToDefaults}
-            exportAsPNG={exportAsPNG}
-            updateSelectedPoint={updateSelectedPoint}
-          />
-        )}
+        {/* Controls Area */}
+        <div className="lg:w-1/2 flex flex-col lg:h-full">
+          {/* Fixed Toolbar on Desktop */}
+          <div className="flex-shrink-0 p-6 pb-4 lg:border-b border-[#222222]">
+            <Toolbar
+              mode={mode}
+              setMode={setMode}
+              onRandomize={randomizeGradient}
+              onToggleUI={() => setShowControls((v) => !v)}
+              showUI={showControls}
+            />
+          </div>
+
+          {/* Scrollable Control Panel */}
+          {showControls && (
+            <div className="lg:flex-1 lg:overflow-y-auto pb-6 lg:pb-0">
+              <div className="p-6 pt-4">
+                <ControlPanel
+                  mode={mode}
+                  stops={stops}
+                  meshPoints={meshPoints}
+                  radialPoints={radialPoints}
+                  filters={filters}
+                  selectedPoint={selectedPoint}
+                  isExporting={isExporting}
+                  exportSize={exportSize}
+                  glOK={glStatus.ok}
+                  setStops={setStops}
+                  setMeshPoints={setMeshPoints}
+                  setFilters={setFilters}
+                  setSelectedPoint={setSelectedPoint}
+                  setExportSize={setExportSize}
+                  addStop={addStop}
+                  addMeshPoint={addMeshPoint}
+                  removeStop={removeStop}
+                  removeMeshPoint={removeMeshPoint}
+                  onReset={resetToDefaults}
+                  exportAsPNG={exportAsPNG}
+                  updateSelectedPoint={updateSelectedPoint}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
       <Footer glStatus={glStatus} />
     </div>
   );

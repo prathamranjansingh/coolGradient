@@ -12,6 +12,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { GradientMode } from "@/lib/type";
+import { Button } from "../ui/button";
 
 type Props = {
   mode: GradientMode;
@@ -29,54 +30,56 @@ export function Toolbar({
   showUI,
 }: Props) {
   return (
-    <div className="bg-zinc-900 rounded-lg p-4">
+    <div className="border-t border-b border-[#222222] p-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex gap-2 flex-wrap">
-          <button
+          <Button
             onClick={() => setMode("linear")}
             className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
               mode === "linear"
-                ? "bg-blue-600"
-                : "bg-zinc-800 hover:bg-zinc-700"
+                ? "bg-[#0077FF] text-white hover:bg-[#0077FF]"
+                : ""
             }`}
           >
             <ArrowUpDown size={16} /> Linear
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setMode("radial")}
             className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
               mode === "radial"
-                ? "bg-blue-600"
-                : "bg-zinc-800 hover:bg-zinc-700"
+                ? "bg-[#0077FF] text-white hover:bg-[#0077FF]"
+                : ""
             }`}
           >
             <Circle size={16} /> Radial
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setMode("mesh")}
             className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
-              mode === "mesh" ? "bg-blue-600" : "bg-zinc-800 hover:bg-zinc-700"
+              mode === "mesh"
+                ? "bg-[#0077FF] text-white hover:bg-[#0077FF]"
+                : ""
             }`}
           >
             <Grid3x3 size={16} /> Mesh
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={onRandomize}
-            className="flex items-center gap-2 px-3 py-2 rounded text-sm bg-zinc-800 hover:bg-zinc-700 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded text-sm  transition-colors"
           >
             <Shuffle size={16} /> Random
-          </button>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          <Button
             onClick={onToggleUI}
-            className="px-3 py-2 rounded text-sm bg-zinc-800 hover:bg-zinc-700 flex items-center gap-2 transition-colors"
+            className=" flex items-center gap-2 px-3 py-2 rounded text-sm"
           >
             {showUI ? <EyeOff size={16} /> : <Eye size={16} />}
             {showUI ? "Hide" : "Show"} UI
-          </button>
+          </Button>
         </div>
       </div>
     </div>

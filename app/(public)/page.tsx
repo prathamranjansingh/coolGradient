@@ -1,8 +1,9 @@
 import GradientStudio from "@/components/gradient-studio/GradientStudio";
+import { Header } from "@/components/layout/Header";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-4">
+    <main className="min-h-screen bg-black text-white">
       <GradientStudio />
     </main>
   );
