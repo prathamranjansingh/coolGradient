@@ -1,11 +1,12 @@
 "use client";
 import React, {
   useState,
-  useMemo,
+  useMemo, // ⚡ Added useMemo
   useEffect,
   useCallback,
   useRef,
 } from "react";
+import throttle from "lodash.throttle";
 import {
   defaultStops,
   defaultMesh,
@@ -59,6 +60,25 @@ export default function GradientStudio() {
     [stops]
   );
 
+  // --- ⚡ START: PERFORMANCE FIX ---
+  // Create throttled versions of state setters for "hot" updates (like dragging).
+  // This updates the main state at most once per 16ms (~60fps).
+  const throttledSetStops = useMemo(
+    () => throttle(setStops, 16, { leading: true, trailing: true }),
+    [] // Setters are stable, so deps array is empty
+  );
+
+  const throttledSetMeshPoints = useMemo(
+    () => throttle(setMeshPoints, 16, { leading: true, trailing: true }),
+    []
+  );
+
+  const throttledSetRadialPoints = useMemo(
+    () => throttle(setRadialPoints, 16, { leading: true, trailing: true }),
+    []
+  );
+  // --- ⚡ END: PERFORMANCE FIX ---
+
   // --- Core Logic Hooks ---
   const { canvasRef, initWebGL, renderGL, glStatus, glRef, cleanup } =
     useWebGLRenderer(
@@ -81,16 +101,17 @@ export default function GradientStudio() {
   );
   const { overlayRef, drawOverlay } = useOverlayRenderer();
 
+  // ⚡ Pass the new throttled setters to the interactions hook
   const { interactionHandlers, getCursor } = useGradientInteractions({
     mode,
     stops,
     sortedStops,
     meshPoints,
     radialPoints,
-    setStops,
-    setMeshPoints,
-    setRadialPoints,
-    setSelectedPoint,
+    setStops: throttledSetStops, // ⚡ Use throttled version
+    setMeshPoints: throttledSetMeshPoints, // ⚡ Use throttled version
+    setRadialPoints: throttledSetRadialPoints, // ⚡ Use throttled version
+    setSelectedPoint, // Selecting is a single click, no throttle needed
   });
 
   // --- Resize Handler ---
@@ -233,6 +254,8 @@ export default function GradientStudio() {
   ]);
 
   // --- State Updaters / Callbacks ---
+  // Note: These (add, remove, reset) are single events,
+  // so they should use the *direct* setters (e.g., setStops) for instant updates.
 
   const addStop = useCallback(() => {
     if (stops.length >= MAX_STOPS) return;
@@ -398,6 +421,10 @@ export default function GradientStudio() {
     overlayRef,
   ]);
 
+  // This function is for the Inspector panel.
+  // It's a single event (like add/remove) so it can use the direct setter.
+  // The Inspector itself is now debounced, so this will only be called
+  // after the user stops dragging a slider.
   const updateSelectedPoint = useCallback(
     (key: string, value: any) => {
       if (!selectedPoint) return;
@@ -429,12 +456,7 @@ export default function GradientStudio() {
   if (!isClient) {
     return (
       <div className="w-full mx-auto min-h-screen flex flex-col">
-        <Header
-          isPreviewMode={false}
-          onTogglePreview={() => {}}
-          isMobile={false}
-          onToggleMobileDrawer={() => {}}
-        />
+        <Header />
         <div className="p-4 text-zinc-400">Loading Studio...</div>
       </div>
     );
@@ -442,12 +464,7 @@ export default function GradientStudio() {
 
   return (
     <div className="w-full flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
-      <Header
-        isPreviewMode={isPreviewMode}
-        onTogglePreview={() => setIsPreviewMode((v) => !v)}
-        isMobile={isMobile}
-        onToggleMobileDrawer={() => {}}
-      />
+      <Header />
 
       <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0">
         {/* Canvas Area */}
