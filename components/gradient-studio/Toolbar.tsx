@@ -30,8 +30,8 @@ export function Toolbar({
   showUI,
 }: Props) {
   return (
-    <div className="border-t border-b border-[#222222] p-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="border-t border-b border-[#222222] p-2 sm:p-4 w-full overflow-x-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 w-full">
         <div className="flex gap-2 flex-wrap">
           <Button
             onClick={() => setMode("linear")}

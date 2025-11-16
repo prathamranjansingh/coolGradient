@@ -6,8 +6,8 @@ type Props = {
 
 export function Footer({ glStatus }: Props) {
   return (
-    <footer className="max-w-7xl mx-auto mt-6 p-4 bg-zinc-900 rounded-lg text-sm text-zinc-400 border border-zinc-800">
-      <div className="flex flex-wrap justify-between items-center gap-4">
+    <footer className="w-full mx-auto mt-6 p-2 sm:p-4 bg-zinc-900 rounded-lg text-sm text-zinc-400 border border-zinc-800 overflow-x-hidden">
+      <div className="flex flex-wrap justify-between items-center gap-2 sm:gap-4 w-full">
         <div>
           WebGL status:{" "}
           <span

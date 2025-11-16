@@ -44,6 +44,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+
 :root {
   --colorPrimaryRGB: 211, 117, 43;
   font-family: var(--font-roboto-mono, 'Roboto Mono', monospace);
@@ -117,12 +118,4 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    font-family: var(--font-roboto-mono, 'Roboto Mono', monospace);
-    @apply bg-background text-foreground;
-  }
-}
+

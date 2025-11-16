@@ -133,15 +133,15 @@ export function StopsEditor({
   const currentStops = mode !== "mesh" ? localStops : [];
 
   return (
-    <div className="space-y-3 px-4 pb-4">
-      <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+    <div className="space-y-3 px-2 sm:px-4 pb-4 w-full overflow-x-hidden">
+      <div className="space-y-2 max-h-60 overflow-y-auto pr-2 w-full overflow-x-hidden">
         {mode === "mesh"
           ? // FIX: Added guard clause and map over local state
             currentMeshPoints &&
             currentMeshPoints.map((p, i) => (
               <div
                 key={`mesh-${i}`}
-                className={`flex items-center gap-2 p-2 rounded transition-colors ${
+                className={`flex items-center gap-2 p-2 rounded transition-colors w-full min-w-0 ${
                   selectedPoint?.type === "mesh" && selectedPoint.index === i
                     ? "bg-zinc-700"
                     : "bg-zinc-800/50 hover:bg-zinc-800"
@@ -151,10 +151,10 @@ export function StopsEditor({
                   type="color"
                   value={p.color} // Read from local state
                   onChange={(e) => handleMeshColorChange(e, i)} // Use new handler
-                  className="w-7 h-7 p-0 border-none rounded bg-transparent cursor-pointer"
+                  className="w-7 h-7 p-0 border-none rounded bg-transparent cursor-pointer flex-shrink-0"
                 />
                 <div
-                  className="text-sm flex-1 cursor-pointer"
+                  className="text-sm flex-1 cursor-pointer min-w-0 truncate"
                   onClick={() => setSelectedPoint({ type: "mesh", index: i })}
                 >
                   Point {i + 1}
@@ -176,7 +176,7 @@ export function StopsEditor({
             currentStops.map((s, i) => (
               <div
                 key={`stop-${i}`}
-                className={`flex items-center gap-2 p-2 rounded transition-colors ${
+                className={`flex items-center gap-2 p-2 rounded transition-colors w-full min-w-0 ${
                   (selectedPoint?.type === "linear-stop" ||
                     selectedPoint?.type === "linear" ||
                     selectedPoint?.type === "radial-stop") &&
@@ -189,7 +189,7 @@ export function StopsEditor({
                   type="color"
                   value={s.color} // Read from local state
                   onChange={(e) => handleStopColorChange(e, i)} // Use new handler
-                  className="w-7 h-7 p-0 border-none rounded bg-transparent cursor-pointer"
+                  className="w-7 h-7 p-0 border-none rounded bg-transparent cursor-pointer flex-shrink-0"
                 />
                 <input
                   type="range"
@@ -198,7 +198,7 @@ export function StopsEditor({
                   step={0.01}
                   value={s.position} // Read from local state
                   onChange={(e) => handleStopPositionChange(e, i)} // Use new handler
-                  className="flex-1"
+                  className="flex-1 min-w-0"
                 />
                 <Button
                   variant="ghost"

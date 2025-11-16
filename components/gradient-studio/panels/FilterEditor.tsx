@@ -12,7 +12,7 @@ type Props = {
 export function FilterEditor({ filters, setFilters }: Props) {
   // Local state for immediate UI updates
   const [localFilters, setLocalFilters] = useState(filters);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync local state when parent filters change (from reset, randomize, etc.)
   useEffect(() => {
@@ -49,29 +49,48 @@ export function FilterEditor({ filters, setFilters }: Props) {
 
   return (
     <Collapsible title="Filters">
-      <div className="space-y-4">
+      <div className="space-y-4 px-2 w-full overflow-x-hidden">
         {Object.keys(localFilters).map((k) => {
           const key = k as keyof Filters;
           return (
-            <div key={key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor={key} className="text-zinc-300 text-sm">
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </Label>
-                <span className="w-10 text-xs text-zinc-400 text-right">
+            // --- START: RESPONSIVE LAYOUT FIX ---
+            // Each filter is a flex row.
+            // We use `space-x-3` for gutter, so we use `calc` for precision.
+            <div
+              key={key}
+              className="flex items-center space-x-2 sm:space-x-3 border-b border-b-[#222222] p-2 sm:p-4 w-full min-w-0"
+            >
+              {/* 1. Label: Takes 40% of the width */}
+              <Label
+                htmlFor={key}
+                className="text-[#AAAAAA] font-extralight flex-shrink-0"
+                // Use basis-2/5 (40%) minus a small amount for the gutter
+                style={{ flexBasis: "calc(40% - 0.25rem)", minWidth: 0 }}
+              >
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </Label>
+
+              {/* 2. Slider + Value Container: Takes 60% of the width */}
+              <div
+                className="flex items-center space-x-1 sm:space-x-2 min-w-0 flex-1"
+                // Use basis-3/5 (60%) minus a small amount for the gutter
+                style={{ flexBasis: "calc(60% - 0.25rem)", minWidth: 0 }}
+              >
+                <Slider
+                  id={key}
+                  value={[localFilters[key]]}
+                  min={-1} // Noise filter now behaves like others
+                  max={1}
+                  step={0.01}
+                  onValueChange={(value) => updateFilter(key, value)}
+                  className="py-1 flex-grow min-w-0" // Slider takes up available space *within this block*
+                />
+                <span className="w-8 sm:w-10 text-xs text-zinc-400 text-right flex-shrink-0">
                   {localFilters[key].toFixed(2)}
                 </span>
               </div>
-              <Slider
-                id={key}
-                value={[localFilters[key]]}
-                min={key === "noise" ? 0 : -1}
-                max={1}
-                step={0.01}
-                onValueChange={(value) => updateFilter(key, value)}
-                className="py-1"
-              />
             </div>
+            // --- END: RESPONSIVE LAYNDAYOUT FIX ---
           );
         })}
       </div>

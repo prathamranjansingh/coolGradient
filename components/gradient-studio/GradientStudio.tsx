@@ -455,7 +455,7 @@ export default function GradientStudio() {
 
   if (!isClient) {
     return (
-      <div className="w-full mx-auto min-h-screen flex flex-col">
+      <div className="w-full mx-auto min-h-screen flex flex-col overflow-x-hidden">
         <Header />
         <div className="p-4 text-zinc-400">Loading Studio...</div>
       </div>
@@ -463,12 +463,12 @@ export default function GradientStudio() {
   }
 
   return (
-    <div className="w-full flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
+    <div className="w-full flex flex-col min-h-screen lg:h-screen lg:overflow-hidden overflow-x-hidden">
       <Header />
 
-      <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0">
+      <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0 w-full overflow-x-hidden">
         {/* Canvas Area */}
-        <div className="flex items-center justify-center lg:border-r border-[#222222] lg:w-1/2 min-h-[50vh] lg:h-full">
+        <div className="flex items-center justify-center lg:border-r border-[#222222] lg:w-1/2 min-h-[50vh] lg:h-full w-full">
           <CanvasArea
             canvasRef={canvasRef}
             overlayRef={overlayRef}
@@ -480,9 +480,9 @@ export default function GradientStudio() {
         </div>
 
         {/* Controls Area */}
-        <div className="lg:w-1/2 flex flex-col lg:h-full">
+        <div className="lg:w-1/2 flex flex-col lg:h-full w-full overflow-x-hidden">
           {/* Fixed Toolbar on Desktop */}
-          <div className="flex-shrink-0 p-6 pb-4 lg:border-b border-[#222222]">
+          <div className="flex-shrink-0 p-4 sm:p-6 pb-4 lg:border-b border-[#222222] w-full overflow-x-hidden">
             <Toolbar
               mode={mode}
               setMode={setMode}
@@ -494,8 +494,8 @@ export default function GradientStudio() {
 
           {/* Scrollable Control Panel */}
           {showControls && (
-            <div className="lg:flex-1 lg:overflow-y-auto pb-6 lg:pb-0">
-              <div className="p-6 pt-4">
+            <div className="lg:flex-1 lg:overflow-y-auto pb-6 lg:pb-0 w-full overflow-x-hidden">
+              <div className="w-full">
                 <ControlPanel
                   mode={mode}
                   stops={stops}
