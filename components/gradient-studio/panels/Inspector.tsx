@@ -102,136 +102,141 @@ export function Inspector({
     <div className="w-full overflow-x-hidden">
       <h3 className="text-sm font-semibold mb-1">Selected Point</h3>
 
-      {/* COLOR ROW */}
+      {/* COLOR */}
       {"color" in localData && (
         <Row
           left={<Label className="text-sm text-zinc-300">Color</Label>}
           right={
-            <div className="flex items-center w-full gap-2">
-              <input
-                type="color"
-                value={localData.color}
-                onChange={handleColorUpdate}
-                className="w-8 h-8 p-0 border-none rounded bg-transparent cursor-pointer"
-              />
-            </div>
+            <input
+              type="color"
+              value={localData.color}
+              onChange={handleColorUpdate}
+              className="w-8 h-8 p-0 border-none rounded bg-transparent cursor-pointer"
+            />
           }
         />
       )}
 
-      {/* X ROW */}
+      {/* POSITION X */}
       {"x" in localData && (
         <Row
           left={
-            <Label
-              htmlFor="x-slider"
-              className="text-[#AAAAAA] font-extralight"
-            >
+            <Label className="text-[#AAAAAA] font-extralight leading-none">
               X
             </Label>
           }
           right={
-            <div className="flex items-center w-full gap-2">
-              <Slider
-                id="x-slider"
-                value={[localData.x]}
-                min={0}
-                max={1}
-                step={0.01}
-                onValueChange={(v) => handleSliderUpdate("x", v)}
-                className="flex-grow h-1.5 py-0"
-              />
-              <span className="w-10 text-xs text-zinc-400 text-right">
-                {localData.x.toFixed(2)}
-              </span>
-            </div>
+            <>
+              <div className="flex-1 min-w-0">
+                <Slider
+                  value={[localData.x]}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onValueChange={(v) => handleSliderUpdate("x", v)}
+                  className="w-full h-1.5 py-0"
+                />
+              </div>
+
+              <div className="w-10 flex-shrink-0 text-right">
+                <span className="text-xs text-zinc-400 leading-none block">
+                  {localData.x.toFixed(2)}
+                </span>
+              </div>
+            </>
           }
         />
       )}
 
-      {/* Y ROW */}
+      {/* POSITION Y */}
       {"y" in localData && (
         <Row
           left={
-            <Label htmlFor="y-slider" className="text-[#AAA] font-extralight">
+            <Label className="text-[#AAAAAA] font-extralight leading-none">
               Y
             </Label>
           }
           right={
-            <div className="flex items-center w-full gap-2">
-              <Slider
-                id="y-slider"
-                value={[localData.y]}
-                min={0}
-                max={1}
-                step={0.01}
-                onValueChange={(v) => handleSliderUpdate("y", v)}
-                className="flex-grow h-1.5 py-0"
-              />
-              <span className="w-10 text-xs text-zinc-400 text-right">
-                {localData.y.toFixed(2)}
-              </span>
-            </div>
+            <>
+              <div className="flex-1 min-w-0">
+                <Slider
+                  value={[localData.y]}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onValueChange={(v) => handleSliderUpdate("y", v)}
+                  className="w-full h-1.5 py-0"
+                />
+              </div>
+
+              <div className="w-10 flex-shrink-0 text-right">
+                <span className="text-xs text-zinc-400 leading-none block">
+                  {localData.y.toFixed(2)}
+                </span>
+              </div>
+            </>
           }
         />
       )}
 
-      {/* RADIUS ROW */}
+      {/* RADIUS */}
       {"radius" in localData && (
         <Row
           left={
-            <Label
-              htmlFor="radius-slider"
-              className="text-[#AAA] font-extralight"
-            >
+            <Label className="text-[#AAAAAA] font-extralight leading-none">
               Radius
             </Label>
           }
           right={
-            <div className="flex items-center w-full gap-2">
-              <Slider
-                id="radius-slider"
-                value={[localData.radius]}
-                min={0.01}
-                max={1}
-                step={0.01}
-                onValueChange={(v) => handleSliderUpdate("radius", v)}
-                className="flex-grow h-1.5 py-0"
-              />
-              <span className="w-10 text-xs text-zinc-400 text-right">
-                {localData.radius.toFixed(2)}
-              </span>
-            </div>
+            <>
+              <div className="flex-1 min-w-0">
+                <Slider
+                  value={[localData.radius]}
+                  min={0.01}
+                  max={1}
+                  step={0.01}
+                  onValueChange={(v) => handleSliderUpdate("radius", v)}
+                  className="w-full h-1.5 py-0"
+                />
+              </div>
+
+              <div className="w-10 flex-shrink-0 text-right">
+                <span className="text-xs text-zinc-400 leading-none block">
+                  {localData.radius.toFixed(2)}
+                </span>
+              </div>
+            </>
           }
         />
       )}
 
-      {/* INTENSITY ROW */}
+      {/* INTENSITY */}
       {"intensity" in localData && (
         <Row
           left={
-            <Label
-              htmlFor="intensity-slider"
-              className="text-[#AAA] font-extralight"
-            >
+            <Label className="text-[#AAAAAA] font-extralight leading-none">
               Intensity
             </Label>
           }
           right={
-            <div className="flex items-center w-full gap-2">
-              <Slider
-                id="intensity-slider"
-                value={[localData.intensity]}
-                min={0}
-                max={2}
-                step={0.01}
-                onValueChange={(v) => handleSliderUpdate("intensity", v)}
-                className="flex-grow h-1.5 py-0"
-              />
-              <span className="w-10 text-xs text-zinc-400 text-right">
-                {localData.intensity.toFixed(2)}
-              </span>
-            </div>
+            <>
+              <div className="flex-1 min-w-0">
+                <Slider
+                  value={[localData.intensity]}
+                  min={0}
+                  max={2}
+                  step={0.01}
+                  onValueChange={(v) => handleSliderUpdate("intensity", v)}
+                  className="w-full h-1.5 py-0"
+                />
+              </div>
+
+              <div className="w-10 flex-shrink-0 text-right">
+                <span className="text-xs text-zinc-400 leading-none block">
+                  {localData.intensity.toFixed(2)}
+                </span>
+              </div>
+            </>
           }
         />
       )}
