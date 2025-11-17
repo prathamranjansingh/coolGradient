@@ -1,8 +1,8 @@
 import React from "react";
 
 type Props = {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  overlayRef: React.RefObject<HTMLCanvasElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  overlayRef: React.RefObject<HTMLCanvasElement | null>;
   interactionHandlers: {
     onMouseDown: (e: React.MouseEvent<Element, MouseEvent>) => void;
     onMouseMove: (e: React.MouseEvent<Element, MouseEvent>) => void;

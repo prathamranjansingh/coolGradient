@@ -8,6 +8,8 @@ import {
 } from "@/lib/type";
 import { MAX_STOPS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Row } from "@/components/ui/Row";
 
 type Props = {
   mode: GradientMode;
@@ -38,195 +40,167 @@ export function StopsEditor({
   removeMeshPoint,
   onReset,
 }: Props) {
-  // --- START: PERFORMANCE FIX ---
-
-  // 1. Local state for immediate UI updates
   const [localStops, setLocalStops] = useState(stops);
   const [localMeshPoints, setLocalMeshPoints] = useState(meshPoints);
 
   const timeoutStopsRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutMeshRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 2. Sync local state when parent props change
-  useEffect(() => {
-    setLocalStops(stops);
-  }, [stops]);
+  useEffect(() => setLocalStops(stops), [stops]);
+  useEffect(() => setLocalMeshPoints(meshPoints), [meshPoints]);
 
-  useEffect(() => {
-    setLocalMeshPoints(meshPoints);
-  }, [meshPoints]);
-
-  // 3. Debounced updaters for parent state
   const debouncedSetStops = useCallback(
     (newStops: GradientStop[]) => {
-      if (timeoutStopsRef.current) {
-        clearTimeout(timeoutStopsRef.current);
-      }
-      timeoutStopsRef.current = setTimeout(() => {
-        setStops(newStops);
-      }, 16); // ~60fps
+      if (timeoutStopsRef.current) clearTimeout(timeoutStopsRef.current);
+      timeoutStopsRef.current = setTimeout(() => setStops(newStops), 16);
     },
     [setStops]
   );
 
-  const debouncedSetMeshPoints = useCallback(
-    (newMeshPoints: MeshPoint[]) => {
-      if (timeoutMeshRef.current) {
-        clearTimeout(timeoutMeshRef.current);
-      }
-      timeoutMeshRef.current = setTimeout(() => {
-        setMeshPoints(newMeshPoints);
-      }, 16);
+  const debouncedSetMesh = useCallback(
+    (newPoints: MeshPoint[]) => {
+      if (timeoutMeshRef.current) clearTimeout(timeoutMeshRef.current);
+      timeoutMeshRef.current = setTimeout(() => setMeshPoints(newPoints), 16);
     },
     [setMeshPoints]
   );
 
-  // 4. Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutStopsRef.current) clearTimeout(timeoutStopsRef.current);
-      if (timeoutMeshRef.current) clearTimeout(timeoutMeshRef.current);
-    };
-  }, []);
-
-  // 5. Handlers that update local state first, then call debounced parent updater
   const handleMeshColorChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    index: number
+    i: number
   ) => {
     const newColor = e.target.value;
-    const newMeshPoints = localMeshPoints.map((point, idx) =>
-      idx === index ? { ...point, color: newColor } : point
+    const updated = localMeshPoints.map((p, idx) =>
+      idx === i ? { ...p, color: newColor } : p
     );
-    setLocalMeshPoints(newMeshPoints); // Update local state instantly
-    debouncedSetMeshPoints(newMeshPoints); // Update parent (debounced)
+    setLocalMeshPoints(updated);
+    debouncedSetMesh(updated);
   };
 
   const handleStopColorChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    index: number
+    i: number
   ) => {
     const newColor = e.target.value;
-    const newStops = localStops.map((st, idx) =>
-      idx === index ? { ...st, color: newColor } : st
+    const updated = localStops.map((s, idx) =>
+      idx === i ? { ...s, color: newColor } : s
     );
-    setLocalStops(newStops);
-    debouncedSetStops(newStops);
+    setLocalStops(updated);
+    debouncedSetStops(updated);
   };
 
-  const handleStopPositionChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    const newPosition = Number(e.target.value);
-    const newStops = localStops.map((st, idx) =>
-      idx === index ? { ...st, position: newPosition } : st
+  const handleStopPositionChange = (value: number[], i: number) => {
+    const updated = localStops.map((s, idx) =>
+      idx === i ? { ...s, position: value[0] } : s
     );
-    setLocalStops(newStops);
-    debouncedSetStops(newStops);
+    setLocalStops(updated);
+    debouncedSetStops(updated);
   };
 
-  // --- END: PERFORMANCE FIX ---
-
-  // Use local state for rendering lists
-  const currentMeshPoints = mode === "mesh" ? localMeshPoints : [];
+  const currentMesh = mode === "mesh" ? localMeshPoints : [];
   const currentStops = mode !== "mesh" ? localStops : [];
 
   return (
-    <div className="space-y-3 px-2 sm:px-4 pb-4 w-full overflow-x-hidden">
-      <div className="space-y-2 max-h-60 overflow-y-auto pr-2 w-full overflow-x-hidden">
-        {mode === "mesh"
-          ? // FIX: Added guard clause and map over local state
-            currentMeshPoints &&
-            currentMeshPoints.map((p, i) => (
-              <div
+    <div className="space-y-3 pb-4 w-full overflow-x-hidden">
+      <div className="max-h-60 overflow-y-auto w-full overflow-x-hidden">
+        {/* ---------------- MESH MODE ---------------- */}
+        {mode === "mesh" &&
+          currentMesh.map((p, i) => {
+            return (
+              <Row
                 key={`mesh-${i}`}
-                className={`flex items-center gap-2 p-2 rounded transition-colors w-full min-w-0 ${
-                  selectedPoint?.type === "mesh" && selectedPoint.index === i
-                    ? "bg-zinc-700"
-                    : "bg-zinc-800/50 hover:bg-zinc-800"
-                }`}
-              >
+                left={
+                  <input
+                    type="color"
+                    value={p.color}
+                    onChange={(e) => handleMeshColorChange(e, i)}
+                    className="w-10 h-10 border-none bg-transparent cursor-pointer"
+                  />
+                }
+                right={
+                  <div className="flex items-center gap-2 justify-end w-full">
+                    <div
+                      className="cursor-pointer text-[#AAAAAA] font-extralight px-2 py-1"
+                      onClick={() =>
+                        setSelectedPoint({ type: "mesh", index: i })
+                      }
+                    >
+                      Point {i + 1}
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      onClick={() => removeMeshPoint(i)}
+                      disabled={currentMesh.length <= 2}
+                      className="
+                        w-8 h-8 p-0 flex items-center justify-center 
+                        text-zinc-400 
+                        hover:bg-red-700 hover:text-white
+                      "
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                }
+              />
+            );
+          })}
+
+        {/* ---------------- STOP MODE ---------------- */}
+        {mode !== "mesh" &&
+          currentStops.map((s, i) => (
+            <Row
+              key={`stop-${i}`}
+              left={
                 <input
                   type="color"
-                  value={p.color} // Read from local state
-                  onChange={(e) => handleMeshColorChange(e, i)} // Use new handler
-                  className="w-7 h-7 p-0 border-none rounded bg-transparent cursor-pointer flex-shrink-0"
+                  value={s.color}
+                  onChange={(e) => handleStopColorChange(e, i)}
+                  className="w-10 h-10 border-none bg-transparent cursor-pointer"
                 />
-                <div
-                  className="text-sm flex-1 cursor-pointer min-w-0 truncate"
-                  onClick={() => setSelectedPoint({ type: "mesh", index: i })}
-                >
-                  Point {i + 1}
+              }
+              right={
+                <div className="flex items-center w-full gap-2 justify-end">
+                  <Slider
+                    value={[s.position]}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onValueChange={(v) => handleStopPositionChange(v, i)}
+                    className="w-full h-1.5 py-0"
+                  />
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => removeStop(i)}
+                    disabled={currentStops.length <= 2}
+                    className="
+                      w-10 h-10 p-0 flex items-center justify-center 
+                      text-zinc-400 
+                      hover:bg-red-700 hover:text-white
+                    "
+                  >
+                    <Trash2 size={14} />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeMeshPoint(i)}
-                  className="size-7 text-zinc-400 hover:bg-red-700 hover:text-white"
-                  disabled={currentMeshPoints.length <= 2}
-                  aria-label={`Remove point ${i + 1}`}
-                >
-                  <Trash2 size={14} />
-                </Button>
-              </div>
-            ))
-          : // FIX: Added guard clause and map over local state
-            currentStops &&
-            currentStops.map((s, i) => (
-              <div
-                key={`stop-${i}`}
-                className={`flex items-center gap-2 p-2 rounded transition-colors w-full min-w-0 ${
-                  (selectedPoint?.type === "linear-stop" ||
-                    selectedPoint?.type === "linear" ||
-                    selectedPoint?.type === "radial-stop") &&
-                  selectedPoint.index === i
-                    ? "bg-zinc-700"
-                    : "bg-zinc-800/50 hover:bg-zinc-800"
-                }`}
-              >
-                <input
-                  type="color"
-                  value={s.color} // Read from local state
-                  onChange={(e) => handleStopColorChange(e, i)} // Use new handler
-                  className="w-7 h-7 p-0 border-none rounded bg-transparent cursor-pointer flex-shrink-0"
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={s.position} // Read from local state
-                  onChange={(e) => handleStopPositionChange(e, i)} // Use new handler
-                  className="flex-1 min-w-0"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeStop(i)}
-                  className="size-7 text-zinc-400 hover:bg-red-700 hover:text-white"
-                  disabled={currentStops.length <= 2}
-                  aria-label={`Remove stop ${i + 1}`}
-                >
-                  <Trash2 size={14} />
-                </Button>
-              </div>
-            ))}
+              }
+            />
+          ))}
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2 pt-2 px-2">
         <Button
           size="sm"
           onClick={mode === "mesh" ? addMeshPoint : addStop}
           disabled={
             mode === "mesh"
-              ? currentMeshPoints?.length >= MAX_STOPS
-              : currentStops?.length >= MAX_STOPS
+              ? currentMesh.length >= MAX_STOPS
+              : currentStops.length >= MAX_STOPS
           }
-          aria-label="Add point or stop"
         >
           <Plus size={16} className="mr-1" /> Add
         </Button>
+
         <Button size="sm" variant="outline" onClick={onReset}>
           Reset
         </Button>
