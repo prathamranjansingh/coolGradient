@@ -92,7 +92,7 @@ export function Inspector({
 
   if (!selectedPoint || !localData) {
     return (
-      <div className="p-4 text-sm text-zinc-400 h-24 flex items-center justify-center">
+      <div className="p-4 text-sm font-extralight text-[#AAAAAA] h-24 flex items-center justify-center">
         No point selected.
       </div>
     );
@@ -100,7 +100,7 @@ export function Inspector({
 
   return (
     <div className="w-full overflow-x-hidden">
-      <h3 className="text-sm font-semibold mb-1">Selected Point</h3>
+      <h3 className="text-sm font-semibold mb-1 ml-3">Selected Point</h3>
 
       {/* COLOR */}
       {"color" in localData && (
@@ -240,10 +240,11 @@ export function Inspector({
           }
         />
       )}
-
-      <Button onClick={onDeselect} size="sm" className="mt-2">
-        Deselect
-      </Button>
+      <div className="flex justify-center items-center">
+        <Button onClick={onDeselect} size="sm" className="mt-2 ml-3">
+          Deselect
+        </Button>
+      </div>
     </div>
   );
 }
