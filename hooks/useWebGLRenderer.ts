@@ -248,6 +248,6 @@ export const useWebGLRenderer = (state: WebGLState) => {
     initWebGL,
     renderGL,
     cleanup,
-    glStatus, // Now returns state instead of ref
+    glStatus,
   };
 };

@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-// Mocking the presets based on your original code's usage
 const exportPresets = [
   { name: "HD (1280x720)", width: 1280, height: 720 },
   { name: "Full HD (1920x1080)", width: 1920, height: 1080 },
