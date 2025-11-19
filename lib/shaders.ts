@@ -29,39 +29,11 @@ export const fragmentShaderSource = `
   uniform float u_noise;
   uniform float u_time;
 
-  // High quality noise functions
-  float hash(vec2 p) {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
-  }
-
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-    
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  }
-
-  // Fractal/multi-octave noise for fine grain
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    float frequency = 1.0;
-    
-    for(int i = 0; i < 5; i++) {
-      value += amplitude * noise(p * frequency);
-      frequency *= 2.0;
-      amplitude *= 0.5;
-    }
-    
-    return value;
+  // --- SPECTRA NOISE FUNCTION ---
+  // This is the exact math from the code you liked.
+  // It creates a pseudo-random hash for every single pixel.
+  float rand(vec2 n) { 
+      return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
   }
 
   vec3 adjustColor(vec3 color) {
@@ -149,10 +121,14 @@ export const fragmentShaderSource = `
 
     color = adjustColor(color);
 
-    // Add fine-grained noise
+    // --- APPLY SPECTRA NOISE ---
     if (u_noise > 0.0) {
-      float n = fbm(v_texCoord * 800.0 + u_time * 0.2) - 0.5;
-      color += n * u_noise * 0.08;
+       // 1. gl_FragCoord.xy = ensures noise is 1 pixel size (sharp)
+       // 2. + u_time = ensures noise dances every frame (animated)
+       // 3. - 0.5 = ensures noise adds AND subtracts brightness (centered)
+       
+       float noise = (rand(gl_FragCoord.xy + u_time) - 0.5) * u_noise;
+       color += noise;
     }
 
     gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);

@@ -480,9 +480,9 @@ export default function GradientStudio() {
         </div>
 
         {/* Controls Area */}
-        <div className="lg:w-1/2 flex flex-col lg:h-full w-full overflow-x-hidden">
+        <div className="lg:w-1/2 flex flex-col lg:h-full lg:min-h-0 w-full lg:overflow-hidden overflow-x-hidden">
           {/* Fixed Toolbar on Desktop */}
-          <div className="flex-shrink-0 p-4 sm:p-6 pb-4 lg:border-b border-[#222222] w-full overflow-x-hidden">
+          <div className="flex-shrink-0 p-4 sm:p-6 lg:pb-4 lg:border-b border-[#222222] w-full overflow-x-hidden">
             <Toolbar
               mode={mode}
               setMode={setMode}
@@ -494,32 +494,30 @@ export default function GradientStudio() {
 
           {/* Scrollable Control Panel */}
           {showControls && (
-            <div className="lg:flex-1 lg:overflow-y-auto pb-6 lg:pb-0 w-full overflow-x-hidden">
-              <div className="w-full">
-                <ControlPanel
-                  mode={mode}
-                  stops={stops}
-                  meshPoints={meshPoints}
-                  radialPoints={radialPoints}
-                  filters={filters}
-                  selectedPoint={selectedPoint}
-                  isExporting={isExporting}
-                  exportSize={exportSize}
-                  glOK={glStatus.ok}
-                  setStops={setStops}
-                  setMeshPoints={setMeshPoints}
-                  setFilters={setFilters}
-                  setSelectedPoint={setSelectedPoint}
-                  setExportSize={setExportSize}
-                  addStop={addStop}
-                  addMeshPoint={addMeshPoint}
-                  removeStop={removeStop}
-                  removeMeshPoint={removeMeshPoint}
-                  onReset={resetToDefaults}
-                  exportAsPNG={exportAsPNG}
-                  updateSelectedPoint={updateSelectedPoint}
-                />
-              </div>
+            <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden pb-6 lg:pb-0 w-full overflow-x-hidden">
+              <ControlPanel
+                mode={mode}
+                stops={stops}
+                meshPoints={meshPoints}
+                radialPoints={radialPoints}
+                filters={filters}
+                selectedPoint={selectedPoint}
+                isExporting={isExporting}
+                exportSize={exportSize}
+                glOK={glStatus.ok}
+                setStops={setStops}
+                setMeshPoints={setMeshPoints}
+                setFilters={setFilters}
+                setSelectedPoint={setSelectedPoint}
+                setExportSize={setExportSize}
+                addStop={addStop}
+                addMeshPoint={addMeshPoint}
+                removeStop={removeStop}
+                removeMeshPoint={removeMeshPoint}
+                onReset={resetToDefaults}
+                exportAsPNG={exportAsPNG}
+                updateSelectedPoint={updateSelectedPoint}
+              />
             </div>
           )}
         </div>

@@ -45,7 +45,7 @@ type ControlPanelProps = {
 
 export function ControlPanel(props: ControlPanelProps) {
   return (
-    <aside className="lg:col-span-1 overflow-visible w-full">
+    <aside className="lg:col-span-1 w-full">
       {/* Panel 1: Inspector (Figma-style) */}
       <Inspector
         selectedPoint={props.selectedPoint}
