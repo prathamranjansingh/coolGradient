@@ -1,85 +1,49 @@
 "use client";
-import React, {
-  useState,
-  useMemo, // ⚡ Added useMemo
-  useEffect,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import throttle from "lodash.throttle";
+import { motion } from "motion/react";
 import {
   defaultStops,
   defaultMesh,
   defaultRadialPoints,
   defaultFilters,
-  MAX_STOPS,
 } from "@/lib/constants";
-import {
-  GradientMode,
-  GradientStop,
-  MeshPoint,
-  RadialPoints,
-  Filters,
-  SelectedPoint,
-} from "@/lib/type";
 import { randomColor } from "@/lib/utils";
+import { GradientStop, MeshPoint } from "@/lib/type";
 
 import { useWebGLRenderer } from "@/hooks/useWebGLRenderer";
 import { useOverlayRenderer } from "@/hooks/useOverlayRenderer";
 import { useGradientInteractions } from "@/hooks/useGradientInteractions";
 
-import { Header } from "../layout/Header";
 import { Toolbar } from "./Toolbar";
 import { CanvasArea } from "./CanvasArea";
 import { ControlPanel } from "./ControlPanel";
 import { Footer } from "./Footer";
 
 export default function GradientStudio() {
-  const [mode, setMode] = useState<GradientMode>("linear");
-  const [stops, setStops] = useState<GradientStop[]>(defaultStops);
-  const [meshPoints, setMeshPoints] = useState<MeshPoint[]>(defaultMesh);
-  const [radialPoints, setRadialPoints] =
-    useState<RadialPoints>(defaultRadialPoints);
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(
-    null
-  );
+  const [mode, setMode] = useState<"linear" | "radial" | "mesh">("linear");
+  const [stops, setStops] = useState(defaultStops);
+  const [meshPoints, setMeshPoints] = useState(defaultMesh);
+  const [radialPoints, setRadialPoints] = useState(defaultRadialPoints);
+  const [filters, setFilters] = useState(defaultFilters);
+  const [selectedPoint, setSelectedPoint] = useState<any>(null);
   const [showControls, setShowControls] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportSize, setExportSize] = useState({ width: 1920, height: 1080 });
-  const [isClient, setIsClient] = useState(false);
-  const previewSizeRef = useRef({ width: 0, height: 0 });
 
-  // State for Header
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // --- Memoized State ---
+  // Memoized State
   const sortedStops = useMemo(
     () => [...stops].sort((a, b) => a.position - b.position),
     [stops]
   );
-
-  // --- ⚡ START: PERFORMANCE FIX ---
-  // Create throttled versions of state setters for "hot" updates (like dragging).
-  // This updates the main state at most once per 16ms (~60fps).
-  const throttledSetStops = useMemo(
-    () => throttle(setStops, 16, { leading: true, trailing: true }),
-    [] // Setters are stable, so deps array is empty
-  );
-
-  const throttledSetMeshPoints = useMemo(
-    () => throttle(setMeshPoints, 16, { leading: true, trailing: true }),
-    []
-  );
-
+  const throttledSetStops = useMemo(() => throttle(setStops, 16), []);
+  const throttledSetMeshPoints = useMemo(() => throttle(setMeshPoints, 16), []);
   const throttledSetRadialPoints = useMemo(
-    () => throttle(setRadialPoints, 16, { leading: true, trailing: true }),
+    () => throttle(setRadialPoints, 16),
     []
   );
-  // --- ⚡ END: PERFORMANCE FIX ---
 
-  // --- Core Logic Hooks ---
+  // WebGL Hooks
   const { canvasRef, initWebGL, renderGL, glStatus, glRef, cleanup } =
     useWebGLRenderer(
       useMemo(
@@ -88,6 +52,7 @@ export default function GradientStudio() {
       )
     );
 
+  // Overlay Hooks
   const overlayState = useMemo(
     () => ({
       mode,
@@ -101,147 +66,63 @@ export default function GradientStudio() {
   );
   const { overlayRef, drawOverlay } = useOverlayRenderer();
 
-  // ⚡ Pass the new throttled setters to the interactions hook
+  // Interaction Hooks
   const { interactionHandlers, getCursor } = useGradientInteractions({
     mode,
     stops,
     sortedStops,
     meshPoints,
     radialPoints,
-    setStops: throttledSetStops, // ⚡ Use throttled version
-    setMeshPoints: throttledSetMeshPoints, // ⚡ Use throttled version
-    setRadialPoints: throttledSetRadialPoints, // ⚡ Use throttled version
-    setSelectedPoint, // Selecting is a single click, no throttle needed
+    setStops: throttledSetStops,
+    setMeshPoints: throttledSetMeshPoints,
+    setRadialPoints: throttledSetRadialPoints,
+    setSelectedPoint,
   });
 
-  // --- Resize Handler ---
+  // Resize Logic (FIXED: Now redraws overlay immediately)
   const resizeCanvases = useCallback(() => {
-    const canvas = canvasRef.current;
-    const overlay = overlayRef.current;
-    if (!canvas || !overlay || isExporting) return;
+    if (
+      canvasRef.current &&
+      overlayRef.current &&
+      !isExporting &&
+      canvasRef.current.parentElement
+    ) {
+      const { width, height } =
+        canvasRef.current.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
 
-    const container = canvas.parentElement?.parentElement;
-    if (!container) return;
+      canvasRef.current.width = width * dpr;
+      canvasRef.current.height = height * dpr;
+      overlayRef.current.width = width * dpr;
+      overlayRef.current.height = height * dpr;
 
-    const rect = container.getBoundingClientRect();
-    if (!rect || rect.width === 0 || rect.height === 0) return;
+      // Explicit style size is needed for overlay to match canvas CSS pixels
+      overlayRef.current.style.width = `${width}px`;
+      overlayRef.current.style.height = `${height}px`;
 
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(1, Math.floor(rect.width * dpr));
-    const h = Math.max(1, Math.floor(rect.height * dpr));
-
-    previewSizeRef.current = { width: w, height: h };
-
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-    }
-    if (overlay.width !== w || overlay.height !== h) {
-      overlay.width = w;
-      overlay.height = h;
-      overlay.style.width = `${rect.width}px`;
-      overlay.style.height = `${rect.height}px`;
-    }
-
-    try {
+      // Force redraws
       renderGL();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("renderGL failed during resizeCanvases:", err);
-    }
-  }, [canvasRef, overlayRef, isExporting, renderGL]);
-
-  // --- Effects ---
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Effect for mobile detection
-  useEffect(() => {
-    if (!isClient) return;
-    // 1024px is the default 'lg' breakpoint in Tailwind
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, [isClient]);
-
-  // Initialize WebGL once and set up resize listener
-  useEffect(() => {
-    if (!isClient) return;
-
-    let mounted = true;
-    let rafId: number | null = null;
-    let initialized = false;
-
-    const tryInit = () => {
-      if (!mounted) return;
-
-      const canvas = canvasRef.current;
-      const overlay = overlayRef.current;
-
-      if (!canvas || !overlay) {
-        rafId = requestAnimationFrame(tryInit);
-        return;
-      }
-
-      try {
-        const success = initWebGL();
-        if (success) {
-          initialized = true;
-          resizeCanvases(); // Resize once after successful init
-          window.addEventListener("resize", resizeCanvases);
-        } else {
-          // eslint-disable-next-line no-console
-          console.error(
-            "initWebGL returned false: WebGL initialization failed."
-          );
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("initWebGL threw an error:", err);
-      }
-    };
-
-    tryInit();
-
-    return () => {
-      mounted = false;
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      if (initialized) {
-        window.removeEventListener("resize", resizeCanvases);
-      } else {
-        window.removeEventListener("resize", resizeCanvases);
-      }
-      try {
-        cleanup();
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("cleanup threw:", err);
-      }
-    };
-  }, [isClient, initWebGL, resizeCanvases, cleanup, canvasRef, overlayRef]);
-
-  // Redraw overlay when overlay state changes
-  useEffect(() => {
-    if (!isClient || isExporting) return;
-    try {
       drawOverlay(overlayState);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("drawOverlay failed:", err);
     }
-  }, [overlayState, drawOverlay, isClient, isExporting]);
+  }, [canvasRef, overlayRef, isExporting, renderGL, drawOverlay, overlayState]);
 
-  // Trigger WebGL render when state changes
   useEffect(() => {
-    if (!isClient || isExporting) return;
-    try {
-      renderGL();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("renderGL failed on state change:", err);
+    if (initWebGL()) {
+      resizeCanvases();
+      window.addEventListener("resize", resizeCanvases);
     }
+    return () => {
+      window.removeEventListener("resize", resizeCanvases);
+      cleanup();
+    };
+  }, [initWebGL, resizeCanvases, cleanup]);
+
+  // Regular Draw Loops
+  useEffect(() => {
+    if (!isExporting) drawOverlay(overlayState);
+  }, [overlayState, drawOverlay, isExporting]);
+  useEffect(() => {
+    if (!isExporting) renderGL();
   }, [
     mode,
     sortedStops,
@@ -249,202 +130,37 @@ export default function GradientStudio() {
     radialPoints,
     filters,
     renderGL,
-    isClient,
     isExporting,
   ]);
 
-  // --- State Updaters / Callbacks ---
-  // Note: These (add, remove, reset) are single events,
-  // so they should use the *direct* setters (e.g., setStops) for instant updates.
-
-  const addStop = useCallback(() => {
-    if (stops.length >= MAX_STOPS) return;
-    const start = sortedStops[0];
-    const end = sortedStops[sortedStops.length - 1];
-    const newX = start.x + (end.x - start.x) * 0.5;
-    const newY = start.y + (end.y - start.y) * 0.5;
-
-    const newStop = {
-      position: 0.5,
-      color: randomColor(),
-      x: newX,
-      y: newY,
-      intensity: 1,
-    };
-    setStops((prev) => [...prev, newStop]);
-  }, [stops.length, sortedStops]);
-
-  const addMeshPoint = useCallback(() => {
-    if (meshPoints.length >= MAX_STOPS) return;
-    setMeshPoints((prev) => [
-      ...prev,
-      { x: 0.5, y: 0.5, color: randomColor(), radius: 0.25, intensity: 1 },
-    ]);
-  }, [meshPoints.length]);
-
-  const removeStop = useCallback(
-    (index: number) => {
-      if (stops.length <= 2) return;
-      setStops((prev) => prev.filter((_, i) => i !== index));
-      if (
-        (selectedPoint?.type === "linear-stop" ||
-          selectedPoint?.type === "linear" ||
-          selectedPoint?.type === "radial-stop") &&
-        selectedPoint.index === index
-      )
-        setSelectedPoint(null);
-    },
-    [stops.length, selectedPoint]
-  );
-
-  const removeMeshPoint = useCallback(
-    (index: number) => {
-      if (meshPoints.length <= 2) return;
-      setMeshPoints((prev) => prev.filter((_, i) => i !== index));
-      if (selectedPoint?.type === "mesh" && selectedPoint.index === index)
-        setSelectedPoint(null);
-    },
-    [meshPoints.length, selectedPoint]
-  );
-
-  const resetToDefaults = useCallback(() => {
-    if (mode === "mesh") setMeshPoints(defaultMesh);
-    else setStops(defaultStops);
-    setRadialPoints(defaultRadialPoints);
-  }, [mode]);
-
+  // Actions
   const randomizeGradient = useCallback(() => {
-    if (mode === "mesh")
-      setMeshPoints((prev) =>
-        prev.map((p) => ({
-          ...p,
-          color: randomColor(),
-          intensity: 0.5 + Math.random() * 0.5,
-        }))
-      );
-    else
-      setStops((prev) =>
-        prev.map((s) => ({
-          ...s,
-          color: randomColor(),
-          intensity: 0.5 + Math.random() * 0.5,
-        }))
-      );
+    const randomizeColors = <T extends { color: string }>(arr: T[]): T[] =>
+      arr.map((item) => ({ ...item, color: randomColor() }));
+
+    if (mode === "mesh") {
+      setMeshPoints((prevPoints) => randomizeColors(prevPoints));
+    } else {
+      setStops((prevStops) => randomizeColors(prevStops));
+    }
   }, [mode]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
-      )
-        return;
-      if (e.key === "r") randomizeGradient();
-      if (e.key === "h") setShowControls((v) => !v);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [randomizeGradient]);
-
-  const exportAsPNG = useCallback(async () => {
-    if (!glStatus.ok || !canvasRef.current || !glRef.current) {
-      // eslint-disable-next-line no-console
-      console.warn("Export aborted: GL not ready or canvas missing.");
-      return;
-    }
-
-    setIsExporting(true);
-    const canvas = canvasRef.current!;
-    const gl = glRef.current!;
-    const overlay = overlayRef.current;
-
-    const { width: oldWidth, height: oldHeight } = previewSizeRef.current;
-
-    if (overlay) overlay.style.display = "none";
-
-    canvas.width = exportSize.width;
-    canvas.height = exportSize.height;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-
-    renderGL();
-
-    try {
-      const blob = await new Promise<Blob | null>((resolve, reject) => {
-        canvas.toBlob((b) => {
-          if (b) resolve(b);
-          else reject(new Error("Blob is null"));
-        }, "image/png");
-      });
-
-      if (!blob) throw new Error("Blob creation failed");
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `gradient-${exportSize.width}x${
-        exportSize.height
-      }-${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Export failed:", err);
-    }
-
-    // restore
-    canvas.width = oldWidth;
-    canvas.height = oldHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    if (overlay) overlay.style.display = "block";
-
-    try {
-      renderGL();
-      drawOverlay(overlayState);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("render/draw after export failed:", err);
-    }
-
-    setIsExporting(false);
-  }, [
-    exportSize,
-    renderGL,
-    drawOverlay,
-    glStatus.ok,
-    glRef,
-    overlayState,
-    canvasRef,
-    overlayRef,
-  ]);
-
-  // This function is for the Inspector panel.
-  // It's a single event (like add/remove) so it can use the direct setter.
-  // The Inspector itself is now debounced, so this will only be called
-  // after the user stops dragging a slider.
   const updateSelectedPoint = useCallback(
     (key: string, value: any) => {
       if (!selectedPoint) return;
       if (selectedPoint.type === "mesh")
-        setMeshPoints((prev) =>
-          prev.map((p, i) =>
-            i === selectedPoint.index ? { ...p, [key]: value } : p
+        setMeshPoints((prevPoints) =>
+          prevPoints.map((pt, idx) =>
+            idx === selectedPoint.index ? { ...pt, [key]: value } : pt
           )
         );
-      else if (
-        selectedPoint.type === "linear" ||
-        selectedPoint.type === "linear-stop" ||
-        selectedPoint.type === "radial-stop"
-      )
-        setStops((prev) =>
-          prev.map((s, i) =>
-            i === selectedPoint.index ? { ...s, [key]: value } : s
+      else if (selectedPoint.type.includes("stop"))
+        setStops((prevStops) =>
+          prevStops.map((st, idx) =>
+            idx === selectedPoint.index ? { ...st, [key]: value } : st
           )
         );
-      else if (selectedPoint.type === "radial" && (key === "x" || key === "y"))
+      else if (selectedPoint.type === "radial")
         setRadialPoints((prev) => ({
           ...prev,
           [selectedPoint.point]: { ...prev[selectedPoint.point], [key]: value },
@@ -453,77 +169,122 @@ export default function GradientStudio() {
     [selectedPoint]
   );
 
-  if (!isClient) {
-    return (
-      <div className="w-full mx-auto min-h-screen flex flex-col overflow-x-hidden">
-        <Header />
-        <div className="p-4 text-zinc-400">Loading Studio...</div>
-      </div>
-    );
-  }
+  const exportAsPNG = useCallback(async () => {
+    if (!glStatus.ok || !canvasRef.current || !glRef.current) return;
+    setIsExporting(true);
+    const canvas = canvasRef.current;
+    const gl = glRef.current;
+    const oldW = canvas.width;
+    const oldH = canvas.height;
+
+    canvas.width = exportSize.width;
+    canvas.height = exportSize.height;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    renderGL();
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "gradient-foundry.png";
+        a.click();
+      }
+      canvas.width = oldW;
+      canvas.height = oldH;
+      gl.viewport(0, 0, oldW, oldH);
+      renderGL();
+      setIsExporting(false);
+    });
+  }, [exportSize, renderGL, glStatus, glRef, canvasRef]);
 
   return (
-    <div className="w-full flex flex-col min-h-screen lg:h-screen lg:overflow-hidden overflow-x-hidden">
-      <Header />
-
-      <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0 w-full overflow-x-hidden">
-        {/* Canvas Area */}
-        <div className="flex items-center justify-center lg:border-r border-[#222222] lg:w-1/2 min-h-[50vh] lg:h-full w-full">
-          <CanvasArea
-            canvasRef={canvasRef}
-            overlayRef={overlayRef}
-            interactionHandlers={interactionHandlers}
-            getCursor={getCursor}
-            isExporting={isExporting}
-            glStatus={glStatus}
-          />
-        </div>
-
-        {/* Controls Area */}
-        <div className="lg:w-1/2 flex flex-col lg:h-full lg:min-h-0 w-full lg:overflow-hidden overflow-x-hidden">
-          {/* Fixed Toolbar on Desktop */}
-          <div className="flex-shrink-0 p-4 sm:p-6 lg:pb-4 lg:border-b border-[#222222] w-full overflow-x-hidden">
-            <Toolbar
-              mode={mode}
-              setMode={setMode}
-              onRandomize={randomizeGradient}
-              onToggleUI={() => setShowControls((v) => !v)}
-              showUI={showControls}
-            />
-          </div>
-
-          {/* Scrollable Control Panel */}
-          {showControls && (
-            <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden pb-6 lg:pb-0 w-full overflow-x-hidden">
-              <ControlPanel
-                mode={mode}
-                stops={stops}
-                meshPoints={meshPoints}
-                radialPoints={radialPoints}
-                filters={filters}
-                selectedPoint={selectedPoint}
-                isExporting={isExporting}
-                exportSize={exportSize}
-                glOK={glStatus.ok}
-                setStops={setStops}
-                setMeshPoints={setMeshPoints}
-                setFilters={setFilters}
-                setSelectedPoint={setSelectedPoint}
-                setExportSize={setExportSize}
-                addStop={addStop}
-                addMeshPoint={addMeshPoint}
-                removeStop={removeStop}
-                removeMeshPoint={removeMeshPoint}
-                onReset={resetToDefaults}
-                exportAsPNG={exportAsPNG}
-                updateSelectedPoint={updateSelectedPoint}
-              />
-            </div>
-          )}
-        </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col lg:flex-row h-screen w-full overflow-hidden font-mono"
+    >
+      {/* Left: Fixed Canvas */}
+      <div className="relative w-full h-[50vh] lg:h-full lg:flex-1 bg-[#050505] flex items-center justify-center overflow-hidden border-b lg:border-b-0 lg:border-r border-zinc-800">
+        <CanvasArea
+          canvasRef={canvasRef}
+          overlayRef={overlayRef}
+          interactionHandlers={interactionHandlers}
+          getCursor={getCursor}
+          isExporting={isExporting}
+          glStatus={glStatus}
+        />
       </div>
 
-      <Footer glStatus={glStatus} />
-    </div>
+      {/* Right: Scrollable Controls */}
+      <div className="w-full lg:w-[400px] xl:w-[450px] h-[50vh] lg:h-full flex flex-col bg-black z-20 shadow-2xl shadow-black">
+        <Toolbar
+          mode={mode}
+          setMode={setMode}
+          onRandomize={randomizeGradient}
+          showUI={showControls}
+          onToggleUI={() => setShowControls(!showControls)}
+        />
+
+        {showControls && (
+          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <ControlPanel
+              mode={mode}
+              stops={stops}
+              meshPoints={meshPoints}
+              radialPoints={radialPoints}
+              filters={filters}
+              selectedPoint={selectedPoint}
+              isExporting={isExporting}
+              exportSize={exportSize}
+              glOK={glStatus.ok}
+              setStops={setStops}
+              setMeshPoints={setMeshPoints}
+              setFilters={setFilters}
+              setSelectedPoint={setSelectedPoint}
+              setExportSize={setExportSize}
+              addStop={() =>
+                setStops([
+                  ...stops,
+                  {
+                    position: 0.5,
+                    color: "#ffffff",
+                    x: 0.5,
+                    y: 0.5,
+                    intensity: 1,
+                  },
+                ])
+              }
+              addMeshPoint={() =>
+                setMeshPoints([
+                  ...meshPoints,
+                  {
+                    x: 0.5,
+                    y: 0.5,
+                    color: "#ffffff",
+                    radius: 0.5,
+                    intensity: 1,
+                  },
+                ])
+              }
+              removeStop={(idx) => setStops(stops.filter((_, i) => i !== idx))}
+              removeMeshPoint={(idx) =>
+                setMeshPoints(meshPoints.filter((_, i) => i !== idx))
+              }
+              onReset={() => {
+                mode === "mesh"
+                  ? setMeshPoints(defaultMesh)
+                  : setStops(defaultStops);
+              }}
+              exportAsPNG={exportAsPNG}
+              updateSelectedPoint={updateSelectedPoint}
+            />
+          </div>
+        )}
+
+        <Footer glStatus={glStatus} />
+      </div>
+    </motion.div>
   );
 }

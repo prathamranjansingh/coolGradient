@@ -1,53 +1,20 @@
 import React from "react";
-import {
-  GradientMode,
-  GradientStop,
-  MeshPoint,
-  RadialPoints,
-  Filters,
-  SelectedPoint,
-} from "@/lib/type";
-
-// Import Panel Components
 import { Inspector } from "./panels/Inspector";
 import { FilterEditor } from "./panels/FilterEditor";
 import { StopsEditor } from "./panels/StopsEditor";
 import { ExportEditor } from "./panels/ExportEditor";
-import { Collapsible } from "@/components/ui/collapsible";
 
-// This component receives ALL state and setters from the main GradientStudio
-// and passes them down to the relevant child panels.
-type ControlPanelProps = {
-  mode: GradientMode;
-  stops: GradientStop[];
-  meshPoints: MeshPoint[];
-  radialPoints: RadialPoints;
-  filters: Filters;
-  selectedPoint: SelectedPoint | null;
-  isExporting: boolean;
-  exportSize: { width: number; height: number };
-  glOK: boolean;
+export function ControlPanel(props: any) {
+  const inspectorKey = props.selectedPoint
+    ? `${props.selectedPoint.type}-${
+        props.selectedPoint.index ?? props.selectedPoint.point
+      }`
+    : "idle";
 
-  setStops: React.Dispatch<React.SetStateAction<GradientStop[]>>;
-  setMeshPoints: React.Dispatch<React.SetStateAction<MeshPoint[]>>;
-  setFilters: React.Dispatch<React.SetStateAction<Filters>>;
-  setSelectedPoint: React.Dispatch<React.SetStateAction<SelectedPoint | null>>;
-  setExportSize: (size: { width: number; height: number }) => void;
-
-  addStop: () => void;
-  addMeshPoint: () => void;
-  removeStop: (index: number) => void;
-  removeMeshPoint: (index: number) => void;
-  onReset: () => void;
-  exportAsPNG: () => void;
-  updateSelectedPoint: (key: string, value: any) => void;
-};
-
-export function ControlPanel(props: ControlPanelProps) {
   return (
-    <aside className="lg:col-span-1 w-full">
-      {/* Panel 1: Inspector (Figma-style) */}
+    <div className="w-full pb-20">
       <Inspector
+        key={inspectorKey}
         selectedPoint={props.selectedPoint}
         data={{
           stops: props.stops,
@@ -58,29 +25,24 @@ export function ControlPanel(props: ControlPanelProps) {
         onDeselect={() => props.setSelectedPoint(null)}
       />
 
-      {/* Panel 2: Filters (Collapsible) */}
       <FilterEditor filters={props.filters} setFilters={props.setFilters} />
 
-      {/* Panel 3: Stops/Points (Collapsible) */}
-      <Collapsible title={props.mode === "mesh" ? "Mesh Points" : "Stops"}>
-        <StopsEditor
-          mode={props.mode}
-          stops={props.stops}
-          meshPoints={props.meshPoints}
-          selectedPoint={props.selectedPoint}
-          setStops={props.setStops}
-          setMeshPoints={props.setMeshPoints}
-          setSelectedPoint={props.setSelectedPoint}
-          addStop={props.addStop}
-          addMeshPoint={props.addMeshPoint}
-          removeStop={props.removeStop}
-          removeMeshPoint={props.removeMeshPoint}
-          onReset={props.onReset}
-        />
-      </Collapsible>
+      <StopsEditor
+        mode={props.mode}
+        stops={props.stops}
+        meshPoints={props.meshPoints}
+        selectedPoint={props.selectedPoint}
+        setStops={props.setStops}
+        setMeshPoints={props.setMeshPoints}
+        setSelectedPoint={props.setSelectedPoint}
+        addStop={props.addStop}
+        addMeshPoint={props.addMeshPoint}
+        removeStop={props.removeStop}
+        removeMeshPoint={props.removeMeshPoint}
+        onReset={props.onReset}
+      />
 
-      {/* Panel 4: Export (Collapsible) */}
-      <Collapsible title="Export">
+      <div className="p-4 border-t border-zinc-800 mt-auto">
         <ExportEditor
           isExporting={props.isExporting}
           exportSize={props.exportSize}
@@ -88,7 +50,7 @@ export function ControlPanel(props: ControlPanelProps) {
           onExport={props.exportAsPNG}
           glOK={props.glOK}
         />
-      </Collapsible>
-    </aside>
+      </div>
+    </div>
   );
 }

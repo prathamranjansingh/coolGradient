@@ -17,8 +17,9 @@ export type MeshPoint = {
 };
 
 export type RadialPoints = {
-  center: { x: number; y: number };
-  focus: { x: number; y: number };
+  center: MeshPoint;
+  focus: MeshPoint;
+  [key: string]: MeshPoint;
 };
 
 export type Filters = {
@@ -28,6 +29,8 @@ export type Filters = {
   temperature: number;
   tint: number;
   noise: number;
+  pixelate: number;
+  bloom: number;
 };
 
 export type SelectedPoint =

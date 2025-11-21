@@ -6,43 +6,31 @@ type Props = {
 
 export function Footer({ glStatus }: Props) {
   return (
-    <footer className="w-full mx-auto mt-6 p-2 sm:p-4 bg-zinc-900 rounded-lg text-sm text-zinc-400 border border-zinc-800 overflow-x-hidden">
-      <div className="flex flex-wrap justify-between items-center gap-2 sm:gap-4 w-full">
-        <div>
-          WebGL status:{" "}
-          <span
-            className={`font-mono ml-2 ${
-              glStatus.ok ? "text-emerald-400" : "text-rose-400"
-            }`}
-          >
-            {glStatus.ok ? "OK" : "Error"}
-          </span>
-          {!glStatus.ok && (
-            <span className="text-xs text-rose-300 ml-2">
-              {glStatus.message}
+    <footer className="w-full flex-shrink-0 border-t border-zinc-800 bg-[#0a0a0a] text-[10px] uppercase tracking-wider text-zinc-500">
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-zinc-700 rounded-none animate-pulse"></span>
+            <span>System_Ready</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span>WebGL:</span>
+            <span className={glStatus.ok ? "text-emerald-500" : "text-red-500"}>
+              {glStatus.ok ? "ACTIVE" : "ERROR"}
             </span>
-          )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-4">
-          <span className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-300 text-xs">
-              R
-            </kbd>
+        <div className="flex items-center gap-4 hidden sm:flex">
+          <div className="flex items-center gap-1">
+            <span className="bg-zinc-800 px-1 text-zinc-300">R</span>
             <span>Randomize</span>
-          </span>
-          <span className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-300 text-xs">
-              H
-            </kbd>
-            <span>Toggle UI</span>
-          </span>
-          <span className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-300 text-xs">
-              Shift+Click
-            </kbd>
-            <span>Add Point</span>
-          </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="bg-zinc-800 px-1 text-zinc-300">H</span>
+            <span>UI Toggle</span>
+          </div>
         </div>
       </div>
     </footer>

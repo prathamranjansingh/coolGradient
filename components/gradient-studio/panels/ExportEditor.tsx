@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 
 type Props = {
   isExporting: boolean;
@@ -26,45 +25,35 @@ export function ExportEditor({
   onExport,
   glOK,
 }: Props) {
-  // FIX: Add a guard clause. If props aren't ready, don't render.
-  if (!exportSize) {
-    return null;
-  }
+  if (!exportSize) return null;
 
   const handleValueChange = (value: string) => {
     const [width, height] = value.split("x").map(Number);
     setExportSize({ width, height });
   };
 
-  const currentValue = `${exportSize.width}x${exportSize.height}`;
-
   return (
-    <div className="space-y-4 px-2 sm:px-4 pb-4 w-full overflow-x-hidden">
-      <div className="space-y-2 w-full min-w-0">
-        <Label className="text-sm text-zinc-300">Preset</Label>
+    <div className="space-y-4 w-full">
+      <div className="space-y-2">
+        <span className="panel-header block">Output_Resolution</span>
         <Select
-          value={currentValue}
+          value={`${exportSize.width}x${exportSize.height}`}
           onValueChange={handleValueChange}
           disabled={isExporting}
         >
-          <SelectTrigger className="w-full min-w-0">
-            <SelectValue placeholder="Select export size" />
+          <SelectTrigger className="w-full rounded-none border-zinc-800 bg-black text-xs font-mono h-9 text-zinc-300 focus:ring-0 focus:border-zinc-500">
+            <SelectValue placeholder="Select Size" />
           </SelectTrigger>
-          <SelectContent
-            className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-1rem)]"
-            position="popper"
-            align="start"
-            sideOffset={4}
-            collisionPadding={8}
-          >
+          <SelectContent className="rounded-none border-zinc-800 bg-black text-zinc-300">
             {exportPresets.map((p) => (
               <SelectItem
                 key={p.name}
                 value={`${p.width}x${p.height}`}
-                className="min-w-0"
+                className="text-xs font-mono focus:bg-zinc-900 focus:text-white rounded-none cursor-pointer"
               >
-                <span className="block truncate">
-                  {p.name} ({p.width}x{p.height})
+                {p.name}{" "}
+                <span className="text-zinc-600 ml-2">
+                  [{p.width}x{p.height}]
                 </span>
               </SelectItem>
             ))}
@@ -74,11 +63,16 @@ export function ExportEditor({
 
       <Button
         onClick={onExport}
-        className="w-full"
         disabled={!glOK || isExporting}
+        className="w-full rounded-none bg-white text-black hover:bg-zinc-200 h-10 font-mono text-xs uppercase tracking-widest"
       >
-        <Download size={16} className="mr-2" />
-        {isExporting ? "Exporting..." : "Export PNG"}
+        {isExporting ? (
+          <span className="animate-pulse">Rendering...</span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <Download size={14} /> Export_PNG
+          </span>
+        )}
       </Button>
     </div>
   );
