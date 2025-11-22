@@ -1,4 +1,3 @@
-// src/types/gradient.ts
 export interface ColorStop {
   id: string;
   color: string;

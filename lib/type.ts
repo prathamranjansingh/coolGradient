@@ -1,6 +1,7 @@
 export type GradientMode = "linear" | "radial" | "mesh";
 
 export type GradientStop = {
+  id: string;
   position: number;
   color: string;
   x: number;
@@ -19,25 +20,23 @@ export type MeshPoint = {
 export type RadialPoints = {
   center: MeshPoint;
   focus: MeshPoint;
-  [key: string]: MeshPoint;
 };
 
 export type Filters = {
-  brightness: number;
+  noise: number;
+  tint: number;
+  temperature: number;
   contrast: number;
   saturation: number;
-  temperature: number;
-  tint: number;
-  noise: number;
-  pixelate: number;
-  bloom: number;
+  brightness: number;
 };
 
 export type SelectedPoint =
   | { type: "linear"; index: number }
   | { type: "linear-stop"; index: number }
-  | { type: "radial"; point: "center" | "focus" }
   | { type: "radial-stop"; index: number }
-  | { type: "mesh"; index: number };
+  | { type: "mesh"; index: number }
+  | { type: "radial"; point: "center" | "focus" }
+  | null;
 
-export type InteractionPoint = SelectedPoint | null;
+export type InteractionPoint = SelectedPoint;

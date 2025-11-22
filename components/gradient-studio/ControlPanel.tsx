@@ -5,6 +5,7 @@ import { StopsEditor } from "./panels/StopsEditor";
 import { ExportEditor } from "./panels/ExportEditor";
 
 export function ControlPanel(props: any) {
+  // Forces Inspector to re-mount when selection changes to prevent stale state
   const inspectorKey = props.selectedPoint
     ? `${props.selectedPoint.type}-${
         props.selectedPoint.index ?? props.selectedPoint.point
