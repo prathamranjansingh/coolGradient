@@ -9,8 +9,6 @@ import {
   defaultRadialPoints,
   defaultFilters,
 } from "@/lib/constants";
-import { randomColor } from "@/lib/utils";
-// 1. FIX: Import all necessary types
 import { GradientStop, SelectedPoint, RadialPoints } from "@/lib/type";
 
 import { useWebGLRenderer } from "@/hooks/useWebGLRenderer";
@@ -21,6 +19,49 @@ import { Toolbar } from "./Toolbar";
 import { CanvasArea } from "./CanvasArea";
 import { ControlPanel } from "./ControlPanel";
 import { Footer } from "./Footer";
+
+// --- 1. CURATED "PINTEREST" PALETTES ---
+// These are hand-picked to ensure they never look muddy.
+
+const DESIGNER_PALETTES = [
+  // 1. The "Aura" (Soft, dreamy)
+  ["#FF9A9E", "#FECFEF", "#A18CD1", "#FBC2EB"],
+  // 2. "Northern Lights" (Deep mesh)
+  ["#4338CA", "#3B82F6", "#10B981", "#6EE7B7"],
+  // 3. "Sunset Drive" (Orange/Purple/Pink)
+  ["#FF3CAC", "#784BA0", "#2B86C5"],
+  // 4. "Peachy Clean" (Soft beige/orange)
+  ["#FFECD2", "#FCB69F", "#FF9A9E"],
+  // 5. "Acid Rain" (High contrast Y2K)
+  ["#D9F99D", "#22D3EE", "#F472B6", "#818CF8"],
+  // 6. "Deep Space"
+  ["#0F172A", "#334155", "#475569", "#94A3B8"],
+  // 7. "Cotton Candy"
+  ["#D9AFD9", "#97D9E1", "#F8A1D1"],
+  // 8. "Hyper" (SaaS website style)
+  ["#A855F7", "#6366F1", "#3B82F6", "#EC4899"],
+  // 9. "Warm Grain"
+  ["#EAE5C9", "#6CC6CB", "#FF9A8B", "#FF6A88"],
+  // 10. "Midnight Oil"
+  ["#232526", "#414345", "#F43F5E"],
+  // 11. "Kindle" (Warm fire)
+  ["#F5AF19", "#F12711", "#93291E"],
+  // 12. "Sublime"
+  ["#FC5C7D", "#6A82FB"],
+  // 13. "Witching Hour"
+  ["#c31432", "#240b36", "#512a5e"],
+  // 14. "Azure"
+  ["#00c6ff", "#0072ff", "#0f2027"],
+  // 15. "Lush"
+  ["#134E5E", "#71B280", "#D9F99D"],
+];
+
+function getRandomPalette() {
+  const index = Math.floor(Math.random() * DESIGNER_PALETTES.length);
+  return DESIGNER_PALETTES[index];
+}
+
+// --------------------------------------------------------
 
 export default function GradientStudio() {
   const [mode, setMode] = useState<"linear" | "radial" | "mesh">("linear");
@@ -33,7 +74,6 @@ export default function GradientStudio() {
   const [radialPoints, setRadialPoints] = useState(defaultRadialPoints);
   const [filters, setFilters] = useState(defaultFilters);
 
-  // 2. FIX: Strongly type the selectedPoint state
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(
     null
   );
@@ -42,22 +82,18 @@ export default function GradientStudio() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportSize, setExportSize] = useState({ width: 1920, height: 1080 });
 
-  // Determine active stops based on mode
   const activeStops = mode === "radial" ? radialStops : linearStops;
   const setActiveStops = mode === "radial" ? setRadialStops : setLinearStops;
 
-  // Deselect point when mode changes
   useEffect(() => {
     setSelectedPoint(null);
   }, [mode]);
 
-  // Memoized Sorting
   const sortedStops = useMemo(
     () => [...activeStops].sort((a, b) => a.position - b.position),
     [activeStops]
   );
 
-  // Memoized Throttled Setters
   const throttledSetLinear = useMemo(() => throttle(setLinearStops, 16), []);
   const throttledSetRadial = useMemo(() => throttle(setRadialStops, 16), []);
   const throttledSetMeshPoints = useMemo(() => throttle(setMeshPoints, 16), []);
@@ -69,7 +105,6 @@ export default function GradientStudio() {
   const activeSetStopsThrottled =
     mode === "radial" ? throttledSetRadial : throttledSetLinear;
 
-  // WebGL Hooks
   const { canvasRef, initWebGL, renderGL, glStatus, glRef, cleanup } =
     useWebGLRenderer(
       useMemo(
@@ -84,7 +119,6 @@ export default function GradientStudio() {
       )
     );
 
-  // Overlay Hooks
   const overlayState = useMemo(
     () => ({
       mode,
@@ -98,7 +132,6 @@ export default function GradientStudio() {
   );
   const { overlayRef, drawOverlay } = useOverlayRenderer();
 
-  // Interaction Hooks
   const { interactionHandlers, getCursor } = useGradientInteractions({
     mode,
     stops: activeStops,
@@ -111,7 +144,6 @@ export default function GradientStudio() {
     setSelectedPoint,
   });
 
-  // Resize Logic
   const resizeCanvases = useCallback(() => {
     if (
       canvasRef.current &&
@@ -147,7 +179,6 @@ export default function GradientStudio() {
     };
   }, [initWebGL, resizeCanvases, cleanup]);
 
-  // Regular Draw Loops
   useEffect(() => {
     if (!isExporting) drawOverlay(overlayState);
   }, [overlayState, drawOverlay, isExporting]);
@@ -164,15 +195,51 @@ export default function GradientStudio() {
     isExporting,
   ]);
 
-  // Actions
+  // --- UPDATED RANDOMIZER (Auto-adjusts stops to match palette) ---
   const randomizeGradient = useCallback(() => {
-    const randomizeColors = <T extends { color: string }>(arr: T[]): T[] =>
-      arr.map((item) => ({ ...item, color: randomColor() }));
+    // A. Pick a curated palette
+    const palette = getRandomPalette();
 
+    // B. Apply to Mesh
     if (mode === "mesh") {
-      setMeshPoints((prevPoints) => randomizeColors(prevPoints));
-    } else {
-      setActiveStops((prevStops) => randomizeColors(prevStops));
+      setMeshPoints((prevPoints) =>
+        prevPoints.map((pt, i) => {
+          const newColor = palette[i % palette.length];
+          // Slight jitter for organic feel
+          const jitter = 0.1;
+          return {
+            ...pt,
+            x: Math.max(
+              0.1,
+              Math.min(0.9, pt.x + (Math.random() - 0.5) * jitter)
+            ),
+            y: Math.max(
+              0.1,
+              Math.min(0.9, pt.y + (Math.random() - 0.5) * jitter)
+            ),
+            color: newColor,
+          };
+        })
+      );
+      // Auto-add noise for texture
+      setFilters((prev) => ({ ...prev, noise: 0.15 }));
+    }
+
+    // C. Apply to Linear/Radial (FIXED)
+    else {
+      // Create NEW stops based on the palette length
+      // This ensures we see ALL the colors in the curated palette
+      const newStops: GradientStop[] = palette.map((color, i) => ({
+        id: crypto.randomUUID(),
+        // Distribute evenly: 0, 0.33, 0.66, 1.0
+        position: i / (palette.length - 1),
+        color: color,
+        x: 0.5, // Default for radial (unused in linear but required by type)
+        y: 0.5,
+        intensity: 1,
+      }));
+
+      setActiveStops(newStops);
     }
   }, [mode, setActiveStops]);
 
@@ -180,16 +247,13 @@ export default function GradientStudio() {
     (key: string, value: any) => {
       if (!selectedPoint) return;
 
-      // 1. MESH Logic
       if (selectedPoint.type === "mesh") {
         setMeshPoints((prevPoints) =>
           prevPoints.map((pt, idx) =>
             idx === selectedPoint.index ? { ...pt, [key]: value } : pt
           )
         );
-      }
-      // 2. LINEAR/RADIAL STOP Logic
-      else if (
+      } else if (
         selectedPoint.type === "linear-stop" ||
         selectedPoint.type === "radial-stop" ||
         selectedPoint.type === "linear"
@@ -199,13 +263,8 @@ export default function GradientStudio() {
             idx === selectedPoint.index ? { ...st, [key]: value } : st
           )
         );
-      }
-      // 3. RADIAL CONTROL POINT Logic (Center/Focus)
-      else if (selectedPoint.type === "radial") {
-        // 3. FIX: Explicitly cast point to keyof RadialPoints
-        // This tells TS: "Trust me, this string is either 'center' or 'focus'"
+      } else if (selectedPoint.type === "radial") {
         const pointKey = selectedPoint.point as keyof RadialPoints;
-
         setRadialPoints((prev) => ({
           ...prev,
           [pointKey]: {
@@ -285,7 +344,6 @@ export default function GradientStudio() {
       transition={{ duration: 0.5 }}
       className="flex flex-col lg:flex-row h-screen w-full overflow-hidden font-mono"
     >
-      {/* Left: Fixed Canvas */}
       <div className="relative w-full h-[50vh] lg:h-full lg:flex-1 bg-[#050505] flex items-center justify-center overflow-hidden border-b lg:border-b-0 lg:border-r border-zinc-800">
         <CanvasArea
           canvasRef={canvasRef}
@@ -297,7 +355,6 @@ export default function GradientStudio() {
         />
       </div>
 
-      {/* Right: Scrollable Controls */}
       <div className="w-full lg:w-[400px] xl:w-[450px] h-[50vh] lg:h-full flex flex-col bg-black z-20 shadow-2xl shadow-black">
         <Toolbar
           mode={mode}
