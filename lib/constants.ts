@@ -39,3 +39,17 @@ export const exportPresets = [
   { name: "4K (UHD)", width: 3840, height: 2160 },
   { name: "Square (1:1)", width: 2048, height: 2048 },
 ];
+
+//LANDING PAGE
+export const NOISE_SVG_DATA_URI = `data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.5'/%3E%3C/svg%3E`;
+
+export const GRADIENT_PRESETS = [
+  "linear-gradient(45deg, #ff3366, #ffcc33)",
+  "radial-gradient(circle, #8e2de2, #4a00e0)",
+  "conic-gradient(from 0deg, #00f260, #0575e6)",
+  "linear-gradient(to bottom right, #fd746c, #ff9068)",
+  "radial-gradient(at top right, #c94b4b, #4b134f)",
+  "linear-gradient(90deg, #00d2ff, #3a7bd5)",
+  "conic-gradient(from 180deg, #f857a6, #ff5858)",
+  "linear-gradient(to top, #09203f, #537895)",
+];
