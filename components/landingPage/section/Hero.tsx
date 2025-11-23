@@ -36,12 +36,12 @@ const Hero = () => {
           System v2.4 Live
         </div>
         <h1 className="text-[13vw] leading-[0.8] font-bold tracking-tighter text-white mb-8 select-none mix-blend-screen antialiased">
-          PIXEL
+          COOL
           <br />
-          CHAOS
+          GRADIENT
         </h1>
         <p className="mt-8 text-sm md:text-lg text-gray-400 max-w-lg mx-auto leading-relaxed font-mono uppercase tracking-widest antialiased">
-          Generative mesh gradients & noise textures. <br />
+          Make gradients without overthinking it. <br />
           <span className="text-white">Start creating in browser.</span>
         </p>
         <div className="mt-16 flex flex-col md:flex-row justify-center gap-6">
