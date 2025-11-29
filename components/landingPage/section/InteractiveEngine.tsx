@@ -36,7 +36,7 @@ const InteractiveEngine = () => {
               THE MESH.
             </h2>
             <p className="text-gray-500 font-mono uppercase tracking-widest text-xs antialiased">
-              // Drag points. Adjust Noise. Export CSS.
+              // Drag points. Adjust Noise. Export IMAGE.
             </p>
           </div>
           <div className="hidden md:block text-right">

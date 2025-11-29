@@ -11,7 +11,6 @@ export default function LandingPage() {
       <main>
         <Hero />
         <InteractiveEngine />
-        <GradientGrid />
       </main>
       <Footer />
     </div>

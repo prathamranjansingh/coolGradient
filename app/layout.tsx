@@ -20,13 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={
-          robotoMono.variable +
-          " min-h-screen bg-background antialiased overflow-x-hidden"
-        }
-      >
+    <html lang="en" suppressHydrationWarning className={robotoMono.variable}>
+      <body className="min-h-screen bg-background antialiased overflow-x-hidden">
         {children}
       </body>
     </html>

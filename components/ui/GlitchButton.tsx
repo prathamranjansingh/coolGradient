@@ -20,7 +20,7 @@ const GlitchButton = ({
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={`
-        relative px-8 py-3 font-mono text-[10px] uppercase tracking-[0.2em] font-bold transition-all duration-200
+        relative  px-8 py-3 font-mono text-[10px] uppercase tracking-[0.2em] font-bold transition-all duration-200
         group overflow-hidden border
         ${
           primary
@@ -29,7 +29,9 @@ const GlitchButton = ({
         }
       `}
     >
-      <span className="relative z-10 flex items-center gap-2">{children}</span>
+      <span className="relative  z-10 flex items-center text-center justify-center gap-2">
+        {children}
+      </span>
       <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-200 bg-white" />
     </motion.button>
   );

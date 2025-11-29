@@ -35,7 +35,7 @@ const Hero = () => {
           <span className="w-1 h-1 bg-orange-500 animate-pulse" />
           System v2.4 Live
         </div>
-        <h1 className="text-[13vw] leading-[0.8] font-bold tracking-tighter text-white mb-8 select-none mix-blend-screen antialiased">
+        <h1 className=" text-[13vw] leading-[0.8] font-bold tracking-tighter text-white mb-8 select-none mix-blend-screen antialiased">
           COOL
           <br />
           GRADIENT
@@ -46,7 +46,6 @@ const Hero = () => {
         </p>
         <div className="mt-16 flex flex-col md:flex-row justify-center gap-6">
           <GlitchButton primary>Launch App</GlitchButton>
-          <GlitchButton>Read Docs</GlitchButton>
         </div>
       </motion.div>
     </section>

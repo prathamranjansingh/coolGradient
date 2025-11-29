@@ -1,20 +1,18 @@
-"use client";
+import { Footer } from "@/components/landingPage/layout/Footer";
+import { Navbar } from "@/components/landingPage/layout/Navbar";
+import { Hero } from "@/components/landingPage/section/Hero";
+import { GradientGrid } from "@/components/landingPage/section/gradient/GradientGrid";
+import { InteractiveEngine } from "@/components/landingPage/section/InteractiveEngine";
 
-import { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
-import GradientStudio from "@/components/gradient-studio/GradientStudio";
-import Preloader from "@/components/ui/Preloader";
-
-export default function Home() {
-  const [loading, setLoading] = useState(true);
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen w-full bg-black text-white overflow-hidden">
-      <AnimatePresence mode="wait">
-        {loading && <Preloader onComplete={() => setLoading(false)} />}
-      </AnimatePresence>
-
-      {!loading && <GradientStudio />}
-    </main>
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-white selection:text-black">
+      <Navbar />
+      <main>
+        <Hero />
+        <InteractiveEngine />
+      </main>
+      <Footer />
+    </div>
   );
 }
